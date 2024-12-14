@@ -1,0 +1,50 @@
+{
+  // https://v3.nuxtjs.org/concepts/typescript
+  "extends": "./.nuxt/tsconfig.json",
+
+  "include": [
+    "env.d.ts",
+    ".nuxt/nuxt.d.ts",
+    "**/*",
+    "*.vue",
+    "*.ts",
+    "*.tsx",
+    "*.js",
+    "*.jsx",
+    "*.json",
+    "*.md",
+    "*.yml",
+    "../../server",
+    "../../i18n.config.ts",
+    "../../i18n.config.ts",
+    "../desktop/components/Sidebar.vue",
+    "../desktop/components/Sidebar.vue"
+  ],
+  "vueCompilerOptions": {
+    "plugins": ["volar-service-pug", "@vue/language-plugin-pug"]
+  },
+  "compilerOptions": {
+    "module": "ESNext", // or "ES2020"
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "types": [
+      "@nuxt/types",
+      "./types/i18n.d.ts",
+      "unplugin-icons/types/vue",
+      "pinia",
+      "@vueuse/nuxt",
+      // "@intlify/nuxt3",
+      "@pinia/nuxt",
+      "@nuxt/image",
+      "@modyfi/vite-plugin-yaml/modules",
+      "@nuxtjs/i18n"
+
+      // "vue-select"
+    ]
+  },
+  "typeRoots": ["./node_modules/@types", "./src"],
+  "exclude": ["node_modules"]
+}

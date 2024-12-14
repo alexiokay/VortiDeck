@@ -1,0 +1,31 @@
+{
+  "name": "vortideck",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "packages": "pnpm --filter",
+    "app": "pnpm packages web-app vortideck",
+    "start": "pnpm --stream -r run dev",
+    "start:web": "pnpm --filter web-app run dev",
+    "start:mobile": "pnpm --filter vortideck-mobile run tauri android dev",
+    "start:windows": "pnpm --filter vortideck-windows tauri dev",
+    "start:ios": "pnpm --filter ortideck-mobile run tauri ios dev",
+    "build:web": "pnpm --filter web-app run build",
+    "build:mobile": "pnpm --filter vortideck-mobile run build",
+    "build:windows": "pnpm --filter  vortideck-windows run build",
+    "build:ios": "pnpm --filter vortideck-mobile run tauri ios dev",
+    "generate:web": "pnpm --filter web-app run generate",
+    "generate:mobile": "pnpm --filter vortideck-mobile run generate",
+    "clean:web": "pnpm --filter web-app run clean",
+    "clean:mobile": "pnpm --filter vortideck-mobile run clean"
+  },
+  "workspaces": [
+    "layers/*",
+    "apps/*"
+  ],
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@9.14.2+sha1.5202b50ab92394b3c922d2e293f196e2df6d441b"
+}

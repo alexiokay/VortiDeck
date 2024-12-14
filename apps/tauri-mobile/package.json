@@ -1,0 +1,24 @@
+{
+  "name": "vortideck-mobile",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "nuxt": "nuxt dev",
+    "dev": "nuxt dev --host ",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.1.1",
+    "@tauri-apps/cli": "^2.1.0",
+    "@tauri-apps/plugin-shell": "~2",
+    "@tauri-apps/plugin-websocket": "~2",
+    "base": "link:layers\\base",
+    "nuxt": "^3.14.1592",
+    "vue": "latest",
+    "vue-router": "latest"
+  }
+}

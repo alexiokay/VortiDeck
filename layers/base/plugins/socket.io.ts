@@ -1,0 +1,94 @@
+export default defineNuxtPlugin(() => {
+  const config = useRuntimeConfig();
+  const socket = ref<WebSocket | null>(null); // Make it reactive
+  const isWebSocketConnected = ref(false); // Track the connection status
+
+  let reconnectInterval: number | null = null;
+
+  // Function to establish WebSocket connection
+  const connectWebSocket = () => {
+    // Check if there's an existing connection
+    if (socket.value && socket.value.readyState === WebSocket.OPEN) {
+      console.log("Already connected.");
+      return;
+    }
+
+    // Create a new WebSocket instance
+    socket.value = new WebSocket("ws://192.168.178.129:9001/");
+
+    // Generate or retrieve a client ID
+    let clientId = localStorage.getItem("clientId");
+    if (!clientId) {
+      clientId = crypto.randomUUID(); // Generate a unique ID
+      localStorage.setItem("clientId", clientId);
+    }
+
+    // Attach an event listener for the 'open' event
+    socket.value.onopen = () => {
+      console.log("WebSocket connection established");
+      isWebSocketConnected.value = true; // Set connection status to true when connected
+
+      // Send device information
+      socket.value?.send(
+        JSON.stringify({
+          device: navigator.userAgent,
+          clientId,
+          action: "connect",
+        })
+      );
+
+      // Stop the reconnecting attempt if connection is successful
+      if (reconnectInterval !== null) {
+        clearInterval(reconnectInterval);
+        reconnectInterval = null;
+      }
+    };
+
+    // Attach an error listener to handle potential connection issues
+    socket.value.onerror = (error) => {
+      console.error("WebSocket error:", error);
+    };
+
+    // Attach a listener for the 'close' event to trigger reconnection
+    socket.value.onclose = (event) => {
+      if (socket.value?.readyState === WebSocket.CLOSED) {
+        console.log("WebSocket is closed now.");
+      }
+      console.log("WebSocket connection closed:", event);
+      isWebSocketConnected.value = false; // Set connection status to false when closed
+      if (!event.wasClean) {
+        attemptReconnect();
+      }
+    };
+
+    // Re-attach onmessage handler every time the socket reconnects
+    socket.value.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      alert("Message received");
+
+      // Handle the message
+      console.log("Received message:", message);
+    };
+  };
+
+  // Function to handle reconnection logic
+  const attemptReconnect = () => {
+    alert("Attempting reconnection");
+    if (reconnectInterval === null) {
+      reconnectInterval = setInterval(() => {
+        console.log("Attempting to reconnect...");
+        connectWebSocket();
+      }, 5000); // Attempt reconnection every 5 seconds
+    }
+  };
+
+  // Initially connect WebSocket
+  connectWebSocket();
+
+  return {
+    provide: {
+      socket,
+      isWebSocketConnected, // Provide the connection status
+    },
+  };
+});

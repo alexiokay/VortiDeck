@@ -1,0 +1,6 @@
+# update the pnpm-workspace.yaml
+
+packages:
+  - "layers/*"
+  - "apps/*"
+  - "packages/*"

@@ -1,0 +1,36 @@
+.theme-default {
+  --background: #eff3f6;
+  --background2: #ffffff;
+  --background3: #f1f4f5;
+  --button: #8b5cf6;
+  --primary: #563CF9;
+  --secondary: #7863fa;
+  --hint: #bfdbfe;
+  --text: #313131;
+  --text2: #bababa;
+  --border: #eaeaea;
+  --border2: #dedede;
+  --invert: invert(0);
+}
+
+.between-lines {
+
+  width: 100%;
+  text-align: center;
+  border-bottom: 1px solid #000;
+  line-height: 0.1em;
+  margin: 10px 0 20px;
+}
+
+
+
+.between-lines span {
+  background: var(--background);
+  padding: 0 10px;
+
+}
+
+::-webkit-scrollbar {
+  display: none;
+  /* Safari and Chrome */
+}
