@@ -1,3 +1,10 @@
+// src/main.rs
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod commands; 
+mod create_websocket_mdns;
+use create_websocket_mdns::create_websocket_mdns; // Correct path to the function
+
+use tauri::Manager;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use futures_util::{StreamExt, SinkExt};
@@ -6,10 +13,32 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 use tokio::sync::broadcast;
 use tauri::State;
 use serde_json::Value;
+use local_ip_address::local_ip;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use mdns_sd::{ServiceDaemon, ServiceInfo};
+
+use std::any::Any;
+use zeroconf::prelude::*;
+use zeroconf::{MdnsService, ServiceRegistration, ServiceType, TxtRecord};
+use tokio::time::{Duration, sleep};
+
+use std::task::Context as StdContext;
+use futures_util::task::Context as FutContext;
+use tauri::Context as TauriContext;
 // use tokio::signal;  // For graceful shutdown on SIGINT and SIGTERM
+
+use tokio::runtime;
+
+use tokio::runtime::Builder; // Ensure you're importing the correct `Builder`
+
+use std::process::Command;
 
 type PeerMap = Arc<Mutex<HashMap<String, PeerInfo>>>; // Using clientId as String for keys
 
+#[derive(Debug)]
+struct MyContext {
+    service_name: String,
+}
 #[derive(Debug, Clone)]
 struct PeerInfo {
     sender: broadcast::Sender<Message>,
@@ -24,35 +53,78 @@ enum Error {
 
 #[tokio::main]
 async fn main() {
+  
+    
+
+    // The main runtime to handle your logic
     let state: PeerMap = Arc::new(Mutex::new(HashMap::new()));
-    let listener = Arc::new(TcpListener::bind("0.0.0.0:9001").await.unwrap());
 
-    // Start WebSocket server
-    tokio::spawn(start_websocket(listener.clone(), state.clone()));
-    println!("WebSocket server started on ws://0.0.0.0:9001");
+    // Get the local IP address
+    let ip = local_ip().unwrap_or_else(|_| "0.0.0.0".parse().unwrap());
 
-    // Clone the `Arc` before passing it to the async block
-    let state_clone = state.clone();
-    // // Gracefully handle termination signals (Ctrl+C or SIGTERM)
-    // let shutdown_signal = async move {
-    //     signal::ctrl_c()
-    //         .await
-    //         .expect("Failed to listen for shutdown signal");
-    //     println!("Shutting down gracefully...");
+    // Try to bind to port 9001, if it fails, find an available port
+    let listener = match TcpListener::bind(format!("{}:9001", ip)).await {
+        Ok(listener) => Arc::new(listener),
+        Err(_) => {
+            println!("Port 9001 is unavailable, finding an available port...");
+            match find_available_port().await {
+                Ok(listener) => listener,
+                Err(e) => {
+                    eprintln!("Error finding an available port: {}", e);
+                    return;
+                }
+            }
+        }
+    };
 
-    //     // Perform any necessary shutdown actions here
-    //     shutdown_websocket_connections(state_clone).await;
-    // };
+    // Clone the listener before passing it into the spawned task
+    let listener_clone = listener.clone();
 
-    // Wait for shutdown signal in the background
-    // tokio::spawn(shutdown_signal);
+    // Create a custom runtime using Builder
+    let runtime = Builder::new_multi_thread()
+        .worker_threads(2) // Adjust the number of threads as needed
+        .enable_all() // Enable all Tokio features (like signal handling)
+        .build()
+        .unwrap();
 
-    // Start the Tauri application (if this is part of your app)
+
+    
+    // Spawn the WebSocket server in the custom runtime
+    runtime.spawn(start_websocket(listener_clone.clone(), state.clone()));
+
+    // Get the actual port the server is listening on
+    let port = listener.local_addr().unwrap().port();
+    println!("WebSocket server started on ws://{}:{}", ip, port);
+
+    // Start the mDNS advertising task in the custom runtime
+    let ip = "192.168.178.129".to_string();
+    let port = 9001;
+
+    // Run mDNS advertisement in the background
+    runtime.spawn(async move {
+        if let Err(err) = create_websocket_mdns(ip, port).await {
+            eprintln!("Error in mDNS advertisement: {}", err);
+        }
+    });
+    sleep(Duration::from_secs(10)).await;
+
+  
+
+    // Clone the listener before using it with Tauri
     tauri::Builder::default()
         .manage(state)
-        .manage(listener)
+        .manage(listener.clone()) // Use the cloned listener here as well
+        .invoke_handler(tauri::generate_handler![commands::discover_websocket::discover_websocket])
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
+}
+
+async fn find_available_port() -> Result<Arc<TcpListener>, std::io::Error> {
+    // Create a TcpListener bound to a random available port
+    let listener = Arc::new(TcpListener::bind("0.0.0.0:0").await?);
+    let port = listener.local_addr()?.port();
+    println!("Listening on port {}", port);
+    Ok(listener)
 }
 
 async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap) {
@@ -181,4 +253,8 @@ async fn shutdown_websocket_connections(state: PeerMap) {
     // Clean up peers after sending close messages
     println!("WebSocket server shutting down...");
 }
+
+
+
+
 

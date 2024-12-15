@@ -1,12 +1,9 @@
 <template>
   <Html>
-    <WindowsTitlebar />
-    <div class="app-content">
-      <NuxtLayout>
-        <NuxtLoadingIndicator :height="5" :duration="3000" :throttle="400" />
-        <NuxtPage class="" />
-      </NuxtLayout>
-    </div>
+    <NuxtLayout>
+      <NuxtLoadingIndicator :height="5" :duration="3000" :throttle="400" />
+      <NuxtPage class="" />
+    </NuxtLayout>
   </Html>
 </template>
 
@@ -21,9 +18,5 @@
 .page-leave-to {
   opacity: 0;
   filter: blur(1rem);
-}
-
-.app-content {
-  padding-top: 30px; /* Same height as the titlebar */
 }
 </style>

@@ -16,16 +16,16 @@
 <script setup lang="ts">
 const { $socket, $isWebSocketConnected } = useNuxtApp();
 
-$socket.value.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  alert("test");
+// $socket.value.onmessage = (event) => {
+//   const message = JSON.parse(event.data);
+//   alert("test");
 
-  //   if (message.type === "component") {
-  //     console.log("Received component:", message.payload);
-  //     // Use the component data (e.g., render it in the UI)
-  //     renderComponent(message.payload);
-  //   }
-};
+//   //   if (message.type === "component") {
+//   //     console.log("Received component:", message.payload);
+//   //     // Use the component data (e.g., render it in the UI)
+//   //     renderComponent(message.payload);
+//   //   }
+// };
 
 function renderComponent(componentData) {
   // Example: Update the UI with the received data
@@ -50,9 +50,9 @@ const sendMessage = () => {
   }
 };
 
-$socket.value.onmessage = (data) => {
-  alert(`Server response: ${data}`);
-};
+// $socket.value.onmessage = (data) => {
+//   alert(`Server response: ${data}`);
+// };
 </script>
 
 <style lang="scss"></style>

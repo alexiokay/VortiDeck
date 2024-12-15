@@ -1,20 +1,62 @@
+import { invoke } from "@tauri-apps/api/core";
+
 export default defineNuxtPlugin(() => {
+  // Define the return type of discoverService
+  interface ServiceInfo {
+    name: string;
+    websocket_url: string;
+  }
+
+  async function discoverService(): Promise<ServiceInfo[] | null> {
+    try {
+      // Safely invoke the Tauri command
+      const result = await invoke<ServiceInfo[]>("discover_websocket");
+      console.log("Discovered services:", result); // Log the result
+      if (result && result.length > 0) {
+        alert(`Found ${result.length} services: ${JSON.stringify(result)}`);
+      } else {
+        alert("No services found");
+      }
+      return result; // Return the list of services
+    } catch (error) {
+      console.error("Error discovering services:", error);
+      alert("Error discovering services");
+      return null; // Return null in case of error
+    }
+  }
+
   const config = useRuntimeConfig();
-  const socket = ref<WebSocket | null>(null); // Make it reactive
-  const isWebSocketConnected = ref(false); // Track the connection status
+  const socket = ref<WebSocket | null>(null); // Reactive WebSocket instance
+  const isWebSocketConnected = ref(false); // Reactive connection status
 
   let reconnectInterval: number | null = null;
 
   // Function to establish WebSocket connection
-  const connectWebSocket = () => {
-    // Check if there's an existing connection
+  const connectWebSocket = async () => {
+    // Prevent redundant connections
     if (socket.value && socket.value.readyState === WebSocket.OPEN) {
       console.log("Already connected.");
       return;
     }
 
+    // Fetch all the WebSocket URLs from the discovered services
+    const serviceInfos = await discoverService();
+    if (!serviceInfos || serviceInfos.length === 0) {
+      console.error("No WebSocket services found.");
+
+      return; // Stop further execution if discovery fails
+    }
+
+    // For now, connect to the first service (you can modify this to connect to any)
+    const serviceInfo = serviceInfos[0];
+    if (!serviceInfo.websocket_url) {
+      console.error("Invalid WebSocket URL.");
+      return;
+    }
+
     // Create a new WebSocket instance
-    socket.value = new WebSocket("ws://192.168.178.129:9001/");
+    socket.value = new WebSocket(serviceInfo.websocket_url);
+    //socket.value = new WebSocket("ws://192.168.178.129:9001/");
 
     // Generate or retrieve a client ID
     let clientId = localStorage.getItem("clientId");
@@ -23,12 +65,12 @@ export default defineNuxtPlugin(() => {
       localStorage.setItem("clientId", clientId);
     }
 
-    // Attach an event listener for the 'open' event
+    // Attach event listeners to the WebSocket
     socket.value.onopen = () => {
       console.log("WebSocket connection established");
-      isWebSocketConnected.value = true; // Set connection status to true when connected
+      isWebSocketConnected.value = true;
 
-      // Send device information
+      // Send initial device information
       socket.value?.send(
         JSON.stringify({
           device: navigator.userAgent,
@@ -37,43 +79,34 @@ export default defineNuxtPlugin(() => {
         })
       );
 
-      // Stop the reconnecting attempt if connection is successful
+      // Stop reconnection attempts on successful connection
       if (reconnectInterval !== null) {
         clearInterval(reconnectInterval);
         reconnectInterval = null;
       }
     };
 
-    // Attach an error listener to handle potential connection issues
     socket.value.onerror = (error) => {
       console.error("WebSocket error:", error);
     };
 
-    // Attach a listener for the 'close' event to trigger reconnection
     socket.value.onclose = (event) => {
-      if (socket.value?.readyState === WebSocket.CLOSED) {
-        console.log("WebSocket is closed now.");
-      }
       console.log("WebSocket connection closed:", event);
-      isWebSocketConnected.value = false; // Set connection status to false when closed
+      isWebSocketConnected.value = false;
       if (!event.wasClean) {
         attemptReconnect();
       }
     };
 
-    // Re-attach onmessage handler every time the socket reconnects
     socket.value.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      alert("Message received");
-
-      // Handle the message
       console.log("Received message:", message);
+      alert("Message received");
     };
   };
 
   // Function to handle reconnection logic
   const attemptReconnect = () => {
-    alert("Attempting reconnection");
     if (reconnectInterval === null) {
       reconnectInterval = setInterval(() => {
         console.log("Attempting to reconnect...");
@@ -88,7 +121,7 @@ export default defineNuxtPlugin(() => {
   return {
     provide: {
       socket,
-      isWebSocketConnected, // Provide the connection status
+      isWebSocketConnected,
     },
   };
 });

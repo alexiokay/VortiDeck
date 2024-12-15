@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from "vue";
 import BiPhone from "~icons/bi/phone?width=16px&height=16px";
 import Fa6SolidCrown from "~icons/fa6-solid/crown?width=648px&height=576px";
 const { $socket } = useNuxtApp();
@@ -31,18 +32,6 @@ const sendMessage = () => {
   console.log("sending message");
   $socket.value.send("Hello, Tauri");
   // console.log("Message sent to server");
-};
-
-$socket.value.onopen = () => {
-  console.log("Socket.IO connected");
-};
-
-$socket.value.onclose = () => {
-  console.log("Socket.IO disconnected");
-};
-
-$socket.value.onmessage = (data) => {
-  console.log("Server response:", data);
 };
 </script>
 

@@ -2,7 +2,7 @@
 div(class="theme-default")
     WindowsTitlebar
       
-    div(id="main-app" style="" class="min-h-screen flex flex-row bg-themeBackground justify-center items-start w-full   ")
+    div(id="main-app" style="" class="min-h-screen flex flex-row bg-themeBackground justify-center items-start w-full mt-[30px]  ")
         //- div#overlay(class="absolute overlaying top-0 left-0 w-full h-screen bg-black opacity-40 z-10 hidden-overlay")
       
         Sidebar(class="" )
