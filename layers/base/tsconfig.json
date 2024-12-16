@@ -18,7 +18,9 @@
     "../../i18n.config.ts",
     "../../i18n.config.ts",
     "../desktop/components/Sidebar.vue",
-    "../desktop/components/Sidebar.vue"
+    "../desktop/components/Sidebar.vue",
+    "../mobile/components/Bottom.vue",
+    "../mobile/components/Bottom.vue"
   ],
   "vueCompilerOptions": {
     "plugins": ["volar-service-pug", "@vue/language-plugin-pug"]

@@ -13,14 +13,14 @@ export default defineNuxtPlugin(() => {
       const result = await invoke<ServiceInfo[]>("discover_websocket");
       console.log("Discovered services:", result); // Log the result
       if (result && result.length > 0) {
-        alert(`Found ${result.length} services: ${JSON.stringify(result)}`);
+        // alert(`Found ${result.length} services: ${JSON.stringify(result)}`);
       } else {
-        alert("No services found");
+        // alert("No services found");
       }
       return result; // Return the list of services
     } catch (error) {
       console.error("Error discovering services:", error);
-      alert("Error discovering services");
+      // alert("Error discovering services");
       return null; // Return null in case of error
     }
   }
@@ -101,7 +101,7 @@ export default defineNuxtPlugin(() => {
     socket.value.onmessage = (event) => {
       const message = JSON.parse(event.data);
       console.log("Received message:", message);
-      alert("Message received");
+      // alert("Message received");
     };
   };
 

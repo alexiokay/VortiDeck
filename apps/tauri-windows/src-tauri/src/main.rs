@@ -114,7 +114,7 @@ async fn main() {
     tauri::Builder::default()
         .manage(state)
         .manage(listener.clone()) // Use the cloned listener here as well
-        .invoke_handler(tauri::generate_handler![commands::discover_websocket::discover_websocket])
+        .invoke_handler(tauri::generate_handler![commands::discover_websocket::discover_websocket, commands::generate_qr_code::generate_qr_code])
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
 }

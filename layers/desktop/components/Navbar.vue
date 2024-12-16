@@ -11,7 +11,8 @@ div(class="flex w-full items-center gap-x-5 pb-3 px-6 bg-themeBackground justify
     div(v-else class="flex items-center gap-x-2 ml-auto relative group")
         div( class="w-3 h-3 bg-red-600 rounded-full group")
         p(class="text-red-600") Disconnected
-    
+        
+    NuxtLink(to="pair") Connect
     div(@click="isProfileSearch = !isProfileSearch" class="  bg-themeBackground2 rounded-lg flex px-3 py-2 gap-x-4  items-center border-[1px] min-w-[20rem] hover:bg-themeBackground2 hover:cursor-pointer relative")
       MaterialSymbolsLightScreenshotMonitorOutline(class="h-7 w-7")
       p Code: Domyslny

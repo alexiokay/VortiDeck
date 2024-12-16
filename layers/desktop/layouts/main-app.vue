@@ -2,12 +2,12 @@
 div(class="theme-default")
     WindowsTitlebar
       
-    div(id="main-app" style="" class="min-h-screen flex flex-row bg-themeBackground justify-center items-start w-full mt-[30px]  ")
+    div(id="main-app" style="" class="h-[calc(100vh-30px)] flex flex-row bg-themeBackground justify-center items-start w-full mt-[30px]  ")
         //- div#overlay(class="absolute overlaying top-0 left-0 w-full h-screen bg-black opacity-40 z-10 hidden-overlay")
       
         Sidebar(class="" )
         Navbar(class=" ")
-        div(  class=" flex flex-col gap-y-4 lg:gap-y-8 w-full  h-auto  mb-[9.1dvh] p-2 lg:px-20  2xl:ml-[23rem] mt-[4.2rem] " ) 
+        div(class=" flex flex-col gap-y-4 lg:gap-y-8 w-full  h-[calc(100vh-30px-4.2rem)] p-2 lg:px-20  2xl:ml-[23rem] mt-[4.2rem] " ) 
           //- mt-[9.1dvh]
           //- //min-h-[calc(100dvh-18.2dvh)]
           Transition(name="fade")

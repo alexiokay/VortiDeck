@@ -9,14 +9,17 @@ pub struct ServiceInfo {
     pub websocket_url: String,
 }
 
+
+
 #[tauri::command]
-pub async fn discover_websocket() -> Result<ServiceInfo, String> {
+pub async fn discover_websocket() -> Result<Vec<ServiceInfo>, String> {
     let mdns = ServiceDaemon::new().map_err(|e| format!("Failed to create daemon: {}", e))?;
     let service_type = "_vortideck._tcp.local.";
     let receiver = mdns.browse(service_type).map_err(|e| format!("Failed to browse: {}", e))?;
 
     let timeout = Duration::from_secs(30);
     let start_time = Instant::now();
+    let mut discovered_services = Vec::new(); // Collect all discovered services here
 
     while let Ok(event) = receiver.recv() {
         if start_time.elapsed() > timeout {
@@ -37,10 +40,13 @@ pub async fn discover_websocket() -> Result<ServiceInfo, String> {
                 println!("WebSocket service found: {}", websocket_url);
 
                 // Return the resolved service info
-                return Ok(ServiceInfo {
-                    name: service_name,
-                    websocket_url,
+
+                 // Add the service info to the list
+                discovered_services.push(ServiceInfo {
+                    name: service_name.clone(),
+                    websocket_url: websocket_url.clone(),
                 });
+                return Ok(discovered_services);
             }
             _ => {
                 println!("Received mDNS event: {:?}", event); // Log other events

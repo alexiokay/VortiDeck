@@ -29,3 +29,6 @@ mdns = "3.0.0"
 futures-util = "0.3.31"
 local-ip-address = "0.6.3"
 
+[target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
+tauri-plugin-barcode-scanner = "2"
+

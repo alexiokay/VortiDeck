@@ -1,10 +1,10 @@
 use futures_util::stream::StreamExt;
 use futures_util::TryStreamExt;
-use std::pin::Pin;
 use mdns::{self, RecordKind};
-use std::net::IpAddr;
-use std::time::{Duration, Instant};
 use serde::Serialize;
+use std::net::IpAddr;
+use std::pin::Pin;
+use std::time::{Duration, Instant};
 
 #[derive(Debug, Serialize)] // Ensure it's serializable for Tauri
 pub struct ServiceInfo {
@@ -22,12 +22,13 @@ pub async fn discover_websocket() -> Result<Vec<ServiceInfo>, String> {
     let mut seen_services = std::collections::HashSet::new(); // To track unique services
 
     // Provide a short query interval duration for mDNS discovery
-    let stream = match mdns::discover::all(SERVICE_NAME, Duration::from_millis(100)) {  // Short interval (100ms)
+    let stream = match mdns::discover::all(SERVICE_NAME, Duration::from_millis(100)) {
+        // Short interval (100ms)
         Ok(stream) => Box::pin(stream.listen()), // Pin the stream
         Err(e) => return Err(format!("Failed to discover services: {}", e)),
     };
 
-    let mut stream = stream.fuse();  // Fuse the stream to handle completion
+    let mut stream = stream.fuse(); // Fuse the stream to handle completion
 
     // Wait for and process responses from devices advertising the service
     let timeout = tokio::time::sleep(Duration::from_secs(TIMEOUT_SECONDS)); // Timeout Future
@@ -66,12 +67,11 @@ pub async fn discover_websocket() -> Result<Vec<ServiceInfo>, String> {
     }
 }
 
-
 // Convert mDNS record to an IP address (either IPv4 or IPv6)
 fn to_ip_addr(record: &mdns::Record) -> Option<IpAddr> {
     match record.kind {
-        RecordKind::A(addr) => Some(addr.into()),   // IPv4
+        RecordKind::A(addr) => Some(addr.into()),    // IPv4
         RecordKind::AAAA(addr) => Some(addr.into()), // IPv6
-        _ => None, // Ignore other record types
+        _ => None,                                   // Ignore other record types
     }
 }
