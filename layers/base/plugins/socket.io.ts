@@ -33,6 +33,7 @@ export default defineNuxtPlugin(() => {
 
   // Function to establish WebSocket connection
   const connectWebSocket = async () => {
+    alert("connecting");
     // Prevent redundant connections
     if (socket.value && socket.value.readyState === WebSocket.OPEN) {
       console.log("Already connected.");

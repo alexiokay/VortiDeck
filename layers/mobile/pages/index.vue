@@ -1,8 +1,9 @@
 <template lang="pug">
    
-    div(v-if="$isWebSocketConnected" class="flex items-center gap-x-2 ml-auto relative group")
+    div(v-if="$socket?.readyState===1" class="flex items-center gap-x-2 ml-auto relative group")
         div(class="w-3 h-3 bg-green-600 rounded-full group")
         p(class="text-green-600") Connected
+        p isconnected 
         div(class="absolute group-hover:flex hidden top-[2rem] left-[0.1rem] bg-themeBackground2 px-3 py-2 shadow-md text-nowrap rounded-lg	") OnePlus 11
         
 
@@ -14,7 +15,7 @@
 </template>
 
 <script setup lang="ts">
-const { $socket, $isWebSocketConnected } = useNuxtApp();
+const { $socket } = useNuxtApp();
 
 // $socket.value.onmessage = (event) => {
 //   const message = JSON.parse(event.data);

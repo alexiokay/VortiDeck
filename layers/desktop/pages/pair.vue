@@ -41,8 +41,6 @@ async function getQRCode(data: string | null = null): Promise<void> {
 }
 
 getQRCode();
-
-getQRCode();
 </script>
 
 <style lang="scss"></style>

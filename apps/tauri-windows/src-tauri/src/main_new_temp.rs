@@ -18,9 +18,7 @@ use tauri::State;
 use std::sync::Mutex;
 mod shared_state;
 use crate::shared_state::AppSecrets;
-use tauri::App;
-use tauri::Emitter;
-use tauri::AppHandle;
+
 type PeerMap = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 
 #[derive(Debug, Clone)]
@@ -35,56 +33,13 @@ enum Error {
     Io(#[from] std::io::Error),
 }
 
-fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    use std::thread;
-
-    let test = Manager::state::<AppSecrets>(app);
-    let app_handle = app.handle().clone();
-
-    test.display_secret();
-
-    // Start async tasks
-    tauri::async_runtime::spawn(async move {
-        my_app(app_handle).await
-    });
-    // tauri::async_runtime::spawn(async move {
-    //     // my_app(app_handle.clone()).await 
-        
-    // });
-    
-
-    Ok(())
-}
-
-
-// fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> { //Result<(), Box<dyn std::error::Error>> 
-//     //     start_server()?;
-       
-//     //   // This one
-//         let handle = app.handle();
-//         let test = handle.state::<AppSecrets>();
-//         test.display_secret();
-    
-        
-//         tauri::async_runtime::spawn(async move {
-//             let app_handle = handle.clone();
-//             let result = my_app(handle.clone()).await;
-        
-//             // You can now safely work with `app` and other shared state
-//         });
-    
-//         Ok(())
-//     }
-
-async fn my_app(app_handle: AppHandle) {
-
-    let secrets = app_handle.state::<AppSecrets>();
-
+#[tokio::main]
+async fn main() {
     let state: PeerMap = Arc::new(TokioMutex::new(HashMap::new()));
+    let app_secrets = AppSecrets::default();
+    let system_state = Arc::new(Mutex::new(AppSecrets::default()));
 
-    // let test = app_handle.state::<AppSecrets>();
-
-    // let ws_secret_key = test.get_secret().unwrap_or_default(); // Fetch the secret
+    let ws_secret_key = system_state.lock().unwrap().get_secret().unwrap_or_default(); // Fetch the secret
 
     let ip = local_ip().unwrap_or_else(|_| "0.0.0.0".parse().unwrap());
 
@@ -96,58 +51,40 @@ async fn my_app(app_handle: AppHandle) {
                 Ok(listener) => listener,
                 Err(e) => {
                     eprintln!("Error finding an available port: {}", e);
-                    return; // Return the error here
+                    return;
                 }
             }
         }
     };
 
-    // let runtime = tokio::runtime::Builder::new_multi_thread()
-    //     .worker_threads(2)
-    //     .enable_all()
-    //     .build()
-    //     .unwrap();
-
-
-
     let listener_clone = listener.clone();
 
-    tauri::async_runtime::spawn(start_websocket(listener_clone, state.clone(), secrets.clone(), ip));
+    let runtime = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
+        .enable_all()
+        .build()
+        .unwrap();
+    
+    runtime.spawn(start_websocket(listener_clone.clone(), state.clone(), ws_secret_key.clone(), ip));
 
     let port = listener.local_addr().unwrap().port();
     println!("WebSocket server started on ws://{}:{}", ip, port);
 
-    tauri::async_runtime::spawn(async move {
+    runtime.spawn(async move {
         if let Err(err) = create_websocket_mdns(ip.to_string(), port).await {
             eprintln!("Error in mDNS advertisement: {}", err);
         }
     });
-    
- 
+    sleep(Duration::from_secs(10)).await;
 
-}
-
-#[tokio::main]
-async fn main() {
-   
-    let app_secrets = AppSecrets::default();
-
-   
-
-
-
-   
-    
     tauri::Builder::default()
-        .setup(setup)
         .manage(app_secrets)
-        // .manage(state)
-        // .manage(listener.clone())
+        .manage(state)
+        .manage(listener.clone())
         .invoke_handler(tauri::generate_handler![
             commands::generate_qr_code::generate_qr_code,
             commands::discover_websocket::discover_websocket
         ])
-        
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
 }
@@ -159,15 +96,13 @@ async fn find_available_port() -> Result<Arc<TcpListener>, std::io::Error> {
     Ok(listener)
 }
 
-async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, secrets: State<'_, AppSecrets>, ip: std::net::IpAddr) {
+async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, ws_secret_key: String, ip: std::net::IpAddr) {
     loop {
-        // println!("test {}", secrets.get_secret());
         match listener.accept().await {
-            
             Ok((stream, _)) => {
                 let state = state.clone();
-              
-                tokio::spawn(handle_connection(stream, state, secrets.get_secret(), ip));
+                let ws_secret_key = ws_secret_key.clone();
+                tokio::spawn(handle_connection(stream, state, ws_secret_key, ip));
             }
             Err(e) => {
                 eprintln!("Error accepting connection: {}", e);
@@ -180,8 +115,7 @@ async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, secrets: St
 async fn handle_connection(
     stream: TcpStream,
     state: PeerMap,
-    secrets: String,
-    // secrets: State<'_, AppSecrets>,
+    ws_secret_key: String,
     server_ip: std::net::IpAddr,
 ) {
     let peer_addr = match stream.peer_addr() {
@@ -211,7 +145,7 @@ async fn handle_connection(
     if let Some(Ok(msg)) = read.next().await {
         if let Ok(text) = msg.to_text() {
             if let Ok(json) = serde_json::from_str::<Value>(text) {
-                eprintln!("received: {}", text);
+                eprintln!("received: {}", text.secret);
                 client_id = json["clientId"].as_str().unwrap_or("unknown").to_string();
                 device_type = detect_device_type(json["device"].as_str().unwrap_or(""));
                 provided_secret = json["secret"].as_str().map(|s| s.to_string());
@@ -219,16 +153,10 @@ async fn handle_connection(
         }
     }
 
-    let mut is_authenticated = false;
-
-    // Validate secret for non-server IPs
+    // Validate secret
     if peer_ip != server_ip.to_string() {
         if let Some(secret) = provided_secret {
-            eprintln!("provided secret: {}", secret);
-            eprintln!("correct secret: {}", secrets);
-            // secrets.display_secret();
-            // system_state.lock().unwrap().display_secret();
-            if secret != secrets {
+            if secret != ws_secret_key {
                 eprintln!("Invalid secret for client: {}", client_id);
                 let _ = write.send(Message::Close(None)).await;
                 return;
@@ -240,9 +168,8 @@ async fn handle_connection(
         }
     }
 
-
     println!("Client connected: {} ({})", client_id, device_type);
-    // Add to peers map
+
     {
         let mut peers = state.lock().await;
         peers.insert(
@@ -279,15 +206,5 @@ fn detect_device_type(user_agent: &str) -> String {
         "mobile".to_string()
     } else {
         "desktop".to_string()
-    }
-}
-
-
-async fn forward_to_mobile(state: PeerMap, payload: String) {
-    let peers = state.lock().await;
-    for (client_id, peer) in peers.iter() {
-        if peer.device_type == "mobile" {
-            let _ = peer.sender.send(Message::Text(payload.clone()));
-        }
     }
 }
