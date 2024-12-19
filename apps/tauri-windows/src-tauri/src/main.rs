@@ -21,6 +21,8 @@ use crate::shared_state::AppSecrets;
 use tauri::App;
 use tauri::Emitter;
 use tauri::AppHandle;
+use std::net::IpAddr;
+
 type PeerMap = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 
 #[derive(Debug, Clone)]
@@ -38,10 +40,10 @@ enum Error {
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     use std::thread;
 
-    let test = Manager::state::<AppSecrets>(app);
+    // let test = Manager::state::<AppSecrets>(app);
     let app_handle = app.handle().clone();
 
-    test.display_secret();
+    // test.display_secret();
 
     // Start async tasks
     tauri::async_runtime::spawn(async move {
@@ -78,7 +80,7 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
 async fn my_app(app_handle: AppHandle) {
 
-    let secrets = app_handle.state::<AppSecrets>();
+    // let secrets = app_handle.state::<AppSecrets>();
 
     let state: PeerMap = Arc::new(TokioMutex::new(HashMap::new()));
 
@@ -112,7 +114,7 @@ async fn my_app(app_handle: AppHandle) {
 
     let listener_clone = listener.clone();
 
-    tauri::async_runtime::spawn(start_websocket(listener_clone, state.clone(), secrets.clone(), ip));
+    tauri::async_runtime::spawn(start_websocket(listener_clone, state.clone(), app_handle, ip));
 
     let port = listener.local_addr().unwrap().port();
     println!("WebSocket server started on ws://{}:{}", ip, port);
@@ -159,7 +161,7 @@ async fn find_available_port() -> Result<Arc<TcpListener>, std::io::Error> {
     Ok(listener)
 }
 
-async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, secrets: State<'_, AppSecrets>, ip: std::net::IpAddr) {
+async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, app_handle: AppHandle, ip: std::net::IpAddr) {
     loop {
         // println!("test {}", secrets.get_secret());
         match listener.accept().await {
@@ -167,7 +169,7 @@ async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, secrets: St
             Ok((stream, _)) => {
                 let state = state.clone();
               
-                tokio::spawn(handle_connection(stream, state, secrets.get_secret(), ip));
+                tokio::spawn(handle_connection(stream, state, app_handle.clone(), ip));
             }
             Err(e) => {
                 eprintln!("Error accepting connection: {}", e);
@@ -180,9 +182,8 @@ async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, secrets: St
 async fn handle_connection(
     stream: TcpStream,
     state: PeerMap,
-    secrets: String,
-    // secrets: State<'_, AppSecrets>,
-    server_ip: std::net::IpAddr,
+    app_handle: AppHandle,
+    server_ip: IpAddr,
 ) {
     let peer_addr = match stream.peer_addr() {
         Ok(addr) => addr,
@@ -191,6 +192,8 @@ async fn handle_connection(
             return;
         }
     };
+
+    let secrets = app_handle.state::<AppSecrets>();
 
     let peer_ip = peer_addr.ip().to_string();
     let mut client_id = "unknown".to_string();
@@ -208,10 +211,11 @@ async fn handle_connection(
     let (mut write, mut read) = ws_stream.split();
     let (tx, mut rx) = broadcast::channel::<Message>(100);
 
+    // Parse initial client message
     if let Some(Ok(msg)) = read.next().await {
         if let Ok(text) = msg.to_text() {
             if let Ok(json) = serde_json::from_str::<Value>(text) {
-                eprintln!("received: {}", text);
+                eprintln!("Received initial message: {}", text);
                 client_id = json["clientId"].as_str().unwrap_or("unknown").to_string();
                 device_type = detect_device_type(json["device"].as_str().unwrap_or(""));
                 provided_secret = json["secret"].as_str().map(|s| s.to_string());
@@ -219,30 +223,28 @@ async fn handle_connection(
         }
     }
 
-    let mut is_authenticated = false;
-
-    // Validate secret for non-server IPs
+    // Authenticate if client is not the server
     if peer_ip != server_ip.to_string() {
-        if let Some(secret) = provided_secret {
-            eprintln!("provided secret: {}", secret);
-            eprintln!("correct secret: {}", secrets);
-            // secrets.display_secret();
-            // system_state.lock().unwrap().display_secret();
-            if secret != secrets {
+        match provided_secret {
+            Some(secret) if secret == secrets.get_secret() => {
+                eprintln!("Client authenticated: {}", client_id);
+            }
+            Some(_) => {
                 eprintln!("Invalid secret for client: {}", client_id);
                 let _ = write.send(Message::Close(None)).await;
                 return;
             }
-        } else {
-            eprintln!("No secret provided for client: {}", client_id);
-            let _ = write.send(Message::Close(None)).await;
-            return;
+            None => {
+                eprintln!("No secret provided for client: {}", client_id);
+                let _ = write.send(Message::Close(None)).await;
+                return;
+            }
         }
     }
 
-
     println!("Client connected: {} ({})", client_id, device_type);
-    // Add to peers map
+
+    // Add client to peers map
     {
         let mut peers = state.lock().await;
         peers.insert(
@@ -254,15 +256,27 @@ async fn handle_connection(
         );
     }
 
+    let state_clone = state.clone();
     let client_id_clone = client_id.clone();
+
+    // Spawn a task to handle incoming messages
     tokio::spawn(async move {
         while let Some(Ok(msg)) = read.next().await {
             if let Ok(text) = msg.to_text() {
                 println!("Received from {}: {}", client_id_clone, text);
+                if let Ok(json) = serde_json::from_str::<Value>(text) {
+                    if let Some(action) = json["action"].as_str() {
+                        if action == "component" {
+                            let payload = json.to_string();
+                            forward_to_mobile(state_clone.clone(), payload);
+                        }
+                    }
+                }
             }
         }
     });
 
+    // Handle outgoing messages
     while let Ok(msg) = rx.recv().await {
         if write.send(msg).await.is_err() {
             break;
@@ -270,15 +284,22 @@ async fn handle_connection(
     }
 
     println!("Client disconnected: {}", client_id);
-    let mut peers = state.lock().await;
-    peers.remove(&client_id);
+
+    // Remove client from peers map
+    {
+        let mut peers = state.lock().await;
+        peers.remove(&client_id);
+    }
 }
+
 
 fn detect_device_type(user_agent: &str) -> String {
     if user_agent.contains("Mobile") {
         "mobile".to_string()
-    } else {
+    } else if user_agent.contains("Windows") || user_agent.contains("Macintosh") || user_agent.contains("Linux") {
         "desktop".to_string()
+    } else {
+        "unknown".to_string()
     }
 }
 

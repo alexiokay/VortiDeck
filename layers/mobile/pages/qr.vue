@@ -34,9 +34,17 @@ const connectToWebsocket = (wsUrl: string, key: string) => {
     $isWebSocketConnected.value = true;
     console.log("Connected to WebSocket:", wsUrl);
 
+    let clientId = localStorage.getItem("clientId");
+    if (!clientId) {
+      clientId = crypto.randomUUID(); // Generate a unique ID
+      localStorage.setItem("clientId", clientId);
+    }
+
     // Send authentication or handshake message with secret key
     const authMessage = JSON.stringify({
+      device: navigator.userAgent,
       action: "authenticate",
+      clientId,
       secret: key,
     });
     $socket.value?.send(authMessage);

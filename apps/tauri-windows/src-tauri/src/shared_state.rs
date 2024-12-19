@@ -1,11 +1,14 @@
 // shared_state.rs
 use std::collections::VecDeque;
 use std::sync::Mutex;
+use std::sync::Arc;
 
 #[derive(Default)]
 pub struct AppSecrets {
     pub secret: Mutex<Option<String>>, // A single thread-safe secret
 }
+
+// type StaticAppSecrets = AppSecrets<'static>;
 
 impl AppSecrets {
     /// Set a new secret
