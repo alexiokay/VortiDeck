@@ -102,7 +102,7 @@ export default defineNuxtPlugin(() => {
     socket.value.onmessage = (event) => {
       const message = JSON.parse(event.data);
       console.log("Received message:", message);
-      alert("Message received");
+      // alert("Message received");
     };
   };
 

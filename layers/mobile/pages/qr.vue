@@ -72,7 +72,7 @@ const startScan = async () => {
 
     if (result) {
       scanningInProgress.value = false;
-      alert("Scanned QR Code: " + result.content);
+      // alert("Scanned QR Code: " + result.content);
 
       // Parse scanned QR code content
       const parsedData = JSON.parse(result.content);

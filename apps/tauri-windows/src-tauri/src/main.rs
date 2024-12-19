@@ -124,6 +124,7 @@ async fn my_app(app_handle: AppHandle) {
             eprintln!("Error in mDNS advertisement: {}", err);
         }
     });
+    
     // sleep(Duration::from_secs(10)).await;
  
 
