@@ -153,11 +153,12 @@ async fn handle_connection(
         }
     }
 
-    // Validate secret
+    // Validate secret for non-server IPs
     if peer_ip != server_ip.to_string() {
+        let secrets_guard = secrets.lock().await;
         if let Some(secret) = provided_secret {
-            if secret != ws_secret_key {
-                eprintln!("Invalid secret for client: {}", client_id);
+            if secrets_guard.get(&client_id) != Some(&secret) {
+                eprintln!("Invalid or missing secret for client: {}", client_id);
                 let _ = write.send(Message::Close(None)).await;
                 return;
             }
@@ -169,7 +170,7 @@ async fn handle_connection(
     }
 
     println!("Client connected: {} ({})", client_id, device_type);
-
+    // Add to peers map
     {
         let mut peers = state.lock().await;
         peers.insert(
@@ -206,5 +207,15 @@ fn detect_device_type(user_agent: &str) -> String {
         "mobile".to_string()
     } else {
         "desktop".to_string()
+    }
+}
+
+
+async fn forward_to_mobile(state: PeerMap, payload: String) {
+    let peers = state.lock().await;
+    for (client_id, peer) in peers.iter() {
+        if peer.device_type == "mobile" {
+            let _ = peer.sender.send(Message::Text(payload.clone()));
+        }
     }
 }

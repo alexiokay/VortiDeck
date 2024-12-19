@@ -26,8 +26,7 @@ const connectToWebsocket = (wsUrl: string, key: string) => {
   //   console.warn("WebSocket already connected.");
   //   return;
   // }
-  alert(wsUrl);
-
+  $socket.value = null;
   $socket.value = new WebSocket(wsUrl);
 
   $socket.value.onopen = () => {
@@ -50,16 +49,16 @@ const connectToWebsocket = (wsUrl: string, key: string) => {
     $socket.value?.send(authMessage);
   };
 
-  // $socket.value.onmessage = (event) => {
-  //   console.log("WebSocket message received:", event.data);
+  $socket.value.onmessage = (event) => {
+    console.log("WebSocket message received:", event.data);
 
-  //   // Handle specific actions based on received message
-  //   const message = JSON.parse(event.data);
-  //   if (message.action === "component") {
-  //     // Handle component update
-  //     console.log("Component action received:", message.payload);
-  //   }
-  // };
+    // Handle specific actions based on received message
+    const message = JSON.parse(event.data);
+    if (message.action === "component") {
+      // Handle component update
+      console.log("Component action received:", message.payload);
+    }
+  };
 };
 
 // Function to start scanning

@@ -3,7 +3,7 @@
 mod create_websocket_mdns;
 use create_websocket_mdns::create_websocket_mdns;
 mod commands;
-use tokio::time::{Duration, sleep};
+use tokio::time::{Duration, sleep, timeout};
 use tauri::Manager;
 use std::sync::Arc;
 use std::collections::HashMap;
@@ -124,7 +124,7 @@ async fn my_app(app_handle: AppHandle) {
             eprintln!("Error in mDNS advertisement: {}", err);
         }
     });
-    
+    // sleep(Duration::from_secs(10)).await;
  
 
 }
@@ -200,17 +200,33 @@ async fn handle_connection(
     let mut device_type = "unknown".to_string();
     let mut provided_secret = None;
 
-    let ws_stream = match accept_async(stream).await {
-        Ok(ws_stream) => ws_stream,
-        Err(e) => {
+   
+
+    //This ensures that if the handshake takes longer than 5 seconds, the server will abort.
+    let ws_stream = match timeout(Duration::from_secs(5), accept_async(stream)).await {
+        Ok(Ok(ws_stream)) => ws_stream,
+        Ok(Err(e)) => {
             eprintln!("WebSocket handshake failed: {}", e);
+            return;
+        }
+        Err(_) => {
+            eprintln!("WebSocket handshake timed out");
             return;
         }
     };
 
-    let (mut write, mut read) = ws_stream.split();
-    let (tx, mut rx) = broadcast::channel::<Message>(100);
+    // // old -> 
+    // let ws_stream = match accept_async(stream).await {
+    //     Ok(ws_stream) => ws_stream,
+    //     Err(e) => {
+    //         eprintln!("WebSocket handshake failed: {}", e);
+    //         return;
+    //     }
+    // };
 
+    let (mut write, mut read) = ws_stream.split();
+    let (tx, mut rx) = broadcast::channel::<Message>(2000); // Increased buffer size
+   
     // Parse initial client message
     if let Some(Ok(msg)) = read.next().await {
         if let Ok(text) = msg.to_text() {
@@ -223,24 +239,20 @@ async fn handle_connection(
         }
     }
 
-    // Authenticate if client is not the server
+    // Authenticate client
     if peer_ip != server_ip.to_string() {
         match provided_secret {
-            Some(secret) if secret == secrets.get_secret() => {
+            Some(secret) if Some(&secret) == secrets.get_secret().as_ref() => {
                 eprintln!("Client authenticated: {}", client_id);
             }
-            Some(_) => {
-                eprintln!("Invalid secret for client: {}", client_id);
-                let _ = write.send(Message::Close(None)).await;
-                return;
-            }
-            None => {
-                eprintln!("No secret provided for client: {}", client_id);
+            _ => {
+                eprintln!("Authentication failed for client: {}", client_id);
                 let _ = write.send(Message::Close(None)).await;
                 return;
             }
         }
     }
+    
 
     println!("Client connected: {} ({})", client_id, device_type);
 
@@ -256,10 +268,10 @@ async fn handle_connection(
         );
     }
 
+    // Spawn a task for incoming messages
     let state_clone = state.clone();
     let client_id_clone = client_id.clone();
 
-    // Spawn a task to handle incoming messages
     tokio::spawn(async move {
         while let Some(Ok(msg)) = read.next().await {
             if let Ok(text) = msg.to_text() {
@@ -267,8 +279,7 @@ async fn handle_connection(
                 if let Ok(json) = serde_json::from_str::<Value>(text) {
                     if let Some(action) = json["action"].as_str() {
                         if action == "component" {
-                            let payload = json.to_string();
-                            forward_to_mobile(state_clone.clone(), payload);
+                            forward_to_mobile(state_clone.clone(), json.to_string()).await;
                         }
                     }
                 }
@@ -292,6 +303,18 @@ async fn handle_connection(
     }
 }
 
+async fn forward_to_mobile(state: PeerMap, payload: String) {
+    let peers = state.lock().await;
+    for (client_id, peer_info) in peers.iter() {
+        if peer_info.device_type == "mobile" {
+            if let Err(e) = peer_info.sender.send(Message::Text(payload.clone())) {
+                eprintln!("Failed to send message to {}: {}", client_id, e);
+            }
+        }
+    }
+}
+
+
 
 fn detect_device_type(user_agent: &str) -> String {
     if user_agent.contains("Mobile") {
@@ -304,11 +327,11 @@ fn detect_device_type(user_agent: &str) -> String {
 }
 
 
-async fn forward_to_mobile(state: PeerMap, payload: String) {
-    let peers = state.lock().await;
-    for (client_id, peer) in peers.iter() {
-        if peer.device_type == "mobile" {
-            let _ = peer.sender.send(Message::Text(payload.clone()));
-        }
-    }
-}
+// async fn forward_to_mobile(state: PeerMap, payload: String) {
+//     let peers = state.lock().await;
+//     for (client_id, peer) in peers.iter() {
+//         if peer.device_type == "mobile" {
+//             let _ = peer.sender.send(Message::Text(payload.clone()));
+//         }
+//     }
+// }

@@ -33,7 +33,7 @@ export default defineNuxtPlugin(() => {
 
   // Function to establish WebSocket connection
   const connectWebSocket = async () => {
-    alert("connecting");
+    // alert("connecting");
     // Prevent redundant connections
     if (socket.value && socket.value.readyState === WebSocket.OPEN) {
       console.log("Already connected.");
@@ -102,7 +102,7 @@ export default defineNuxtPlugin(() => {
     socket.value.onmessage = (event) => {
       const message = JSON.parse(event.data);
       console.log("Received message:", message);
-      // alert("Message received");
+      alert("Message received");
     };
   };
 

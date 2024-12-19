@@ -1,21 +1,20 @@
 <template lang="pug">
    
-    div(v-if="$socket?.readyState===1" class="flex items-center gap-x-2 ml-auto relative group")
+    div(v-if="$isWebSocketConnected" class="flex items-center gap-x-2 ml-auto relative group")
         div(class="w-3 h-3 bg-green-600 rounded-full group")
         p(class="text-green-600") Connected
-        p isconnected 
+        p connected 
         div(class="absolute group-hover:flex hidden top-[2rem] left-[0.1rem] bg-themeBackground2 px-3 py-2 shadow-md text-nowrap rounded-lg	") OnePlus 11
         
 
     div(v-else class="flex items-center gap-x-2 ml-auto relative group")
         div( class="w-3 h-3 bg-red-600 rounded-full group")
         p(class="text-red-600") Disconnected
-    p sass s ad s XD
-    button(@click="sendMessage()" class=" px-3 py-2 bg-white rounded-md") send message to socket
+    button(@click="sendMessage()" class=" px-3 py-2 bg-white rounded-md") send message to desktop
 </template>
 
 <script setup lang="ts">
-const { $socket } = useNuxtApp();
+const { $socket, $isWebSocketConnected } = useNuxtApp();
 
 // $socket.value.onmessage = (event) => {
 //   const message = JSON.parse(event.data);
@@ -34,7 +33,7 @@ function renderComponent(componentData) {
   container.innerHTML = `<div id="${componentData.id}">${componentData.content}</div>`;
 }
 
-const sendMessage = () => {
+const sendMessage = async () => {
   console.log("Sending message");
 
   // Check if the socket is ready before sending the message
@@ -44,7 +43,7 @@ const sendMessage = () => {
         action: "component",
         payload: "test key event",
       })
-    );
+    ).await;
     alert("Message sent to server");
   } else {
     alert("WebSocket is not open, cannot send message.");

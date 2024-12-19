@@ -14,64 +14,50 @@ use std::sync::{Arc, Mutex};
 struct Context;
 
 pub async fn create_websocket_mdns(ip: String, port: u16) -> Result<(), String> {
-    // Initialize logging system
-    env_logger::init();
+    // Initialize logging only once
+    env_logger::try_init().unwrap_or_default();
 
-
-    // Run the mDNS advertisement
+    // Start the mDNS advertisement
     if let Err(e) = advertise_service(ip, port).await {
         eprintln!("Failed to advertise service: {}", e);
+        return Err(e.to_string());
     }
 
-    // Keep the main function alive to allow service to continue advertising
-    loop {
-        sleep(Duration::from_secs(10)).await; // Sleep for 60 seconds in a loop
-    }
+    Ok(()) // No infinite loop here
 }
 
 async fn advertise_service(ip: String, port: u16) -> Result<(), zeroconf::error::Error> {
-    let service_name = "vortideck"; // Service name without domain part
-    let protocol = "tcp"; // Protocol type
-    let sub_types = vec!["subtype1", "subtype2"]; // Subtypes (for example)
-    
-    // Use ServiceType::with_sub_types to define the service
+    let service_name = "vortideck";
+    let protocol = "tcp";
+    let sub_types = vec!["subtype1", "subtype2"];
+
     let service_type = ServiceType::with_sub_types(service_name, protocol, sub_types)?;
 
     let mut service = MdnsService::new(service_type, port);
 
-
-
-    // Create and set a TxtRecord
+    // Set the TxtRecord
     let mut txt_record = TxtRecord::new();
-    txt_record.insert("version", "1.0")?; // Optional version
+    txt_record.insert("version", "1.0")?;
     txt_record.insert("description", "Vorticium mDNS Service")?;
     service.set_txt_record(txt_record);
 
-    // Context: Assuming Context type is used for storing some state
-    let context: Arc<Mutex<Context>> = Arc::default();
+    // Set service context
+    let context: Arc<Context> = Arc::default(); // Simplified without Mutex
     service.set_context(Box::new(context));
 
-    // Register callback for when the service is registered
-    service.set_registered_callback(Box::new(|result, _context| {
-        match result {
-            Ok(registration) => {
-                info!("Service successfully registered: {:?}", registration);
-            }
-            Err(e) => {
-                error!("Failed to register service: {}", e);
-            }
-        }
+    // Log service registration status
+    service.set_registered_callback(Box::new(|result, _context| match result {
+        Ok(registration) => info!("Service successfully registered: {:?}", registration),
+        Err(e) => error!("Failed to register service: {}", e),
     }));
 
-    // Register the service and get the event loop
     let event_loop = service.register()?;
 
-    // Parse the IP address manually and handle errors
+    // Parse and log the service address
     let addr = SocketAddrV4::new(
         Ipv4Addr::from_str(&ip).map_err(|e| zeroconf::error::Error::from(format!("IP Parse Error: {}", e)))?, 
         port
     );
-
     println!(
         "Advertising service: {} on {}:{}",
         service_name, addr.ip(), addr.port()
@@ -80,16 +66,16 @@ async fn advertise_service(ip: String, port: u16) -> Result<(), zeroconf::error:
     // Run the mDNS advertisement in the background
     tokio::spawn(async move {
         loop {
-            match event_loop.poll(Duration::from_secs(5)) {
-                Ok(()) => (), // Successful poll, continue
+            match event_loop.poll(Duration::from_secs(10)) {
+                Ok(()) => (),
                 Err(err) => {
                     eprintln!("mDNS poll error: {}", err);
-                    break; // Exit loop on error
+                    break;
                 }
             }
 
-            // Sleep for 1 second to prevent tight polling loop
-            sleep(Duration::from_secs(1)).await;
+            // Sleep to avoid tight polling loops
+            sleep(Duration::from_secs(10)).await;
         }
     });
 
