@@ -1,6 +1,6 @@
 mod commands;
 pub mod shared_state;
-use crate::shared_state::AppSecrets;
+use crate::shared_state::AppState;
 use tauri::{Manager, State, App, AppHandle};
 
 #[tauri::command]
@@ -14,7 +14,7 @@ pub fn run() {
       .setup(|app: &mut App| {
         // Demonstrating how to access and modify state in setup
         let app_handle = app.handle();
-        let secrets_state: State<AppSecrets> = app.state();
+        let secrets_state: State<AppState> = app.state();
 
 
 

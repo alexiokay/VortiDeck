@@ -17,11 +17,13 @@ use tokio::sync::Mutex as TokioMutex;
 use tauri::State;
 use std::sync::Mutex;
 mod shared_state;
-use crate::shared_state::AppSecrets;
+use crate::shared_state::AppState;
 use tauri::App;
-use tauri::Emitter;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use std::net::IpAddr;
+use serde::Serialize;
+use platform_info::*;
+use serde_json::json;
 
 type PeerMap = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 
@@ -29,6 +31,15 @@ type PeerMap = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 struct PeerInfo {
     sender: broadcast::Sender<Message>,
     device_type: String, // "mobile" or "desktop"
+    device: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SerializablePeerInfo  {
+    client_id: String,
+    device_type: String, // Keep only serializable fields
+    device: String,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -40,7 +51,7 @@ enum Error {
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     use std::thread;
 
-    // let test = Manager::state::<AppSecrets>(app);
+    // let test = Manager::state::<AppState>(app);
     let app_handle = app.handle().clone();
 
     // test.display_secret();
@@ -49,42 +60,20 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     tauri::async_runtime::spawn(async move {
         my_app(app_handle).await
     });
-    // tauri::async_runtime::spawn(async move {
-    //     // my_app(app_handle.clone()).await 
-        
-    // });
-    
+
 
     Ok(())
 }
 
 
-// fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> { //Result<(), Box<dyn std::error::Error>> 
-//     //     start_server()?;
-       
-//     //   // This one
-//         let handle = app.handle();
-//         let test = handle.state::<AppSecrets>();
-//         test.display_secret();
-    
-        
-//         tauri::async_runtime::spawn(async move {
-//             let app_handle = handle.clone();
-//             let result = my_app(handle.clone()).await;
-        
-//             // You can now safely work with `app` and other shared state
-//         });
-    
-//         Ok(())
-//     }
 
 async fn my_app(app_handle: AppHandle) {
 
-    // let secrets = app_handle.state::<AppSecrets>();
+    
 
     let state: PeerMap = Arc::new(TokioMutex::new(HashMap::new()));
 
-    // let test = app_handle.state::<AppSecrets>();
+    // let test = app_handle.state::<AppState>();
 
     // let ws_secret_key = test.get_secret().unwrap_or_default(); // Fetch the secret
 
@@ -103,7 +92,11 @@ async fn my_app(app_handle: AppHandle) {
             }
         }
     };
+    let port = listener.local_addr().unwrap().port();
 
+    let app_state = app_handle.state::<AppState>();
+    let info = PlatformInfo::new().expect("Unable to determine platform info");
+    app_state.set_server_data(ip, port, info.sysname().to_string_lossy().to_string(), info.nodename().to_string_lossy().to_string());
     // let runtime = tokio::runtime::Builder::new_multi_thread()
     //     .worker_threads(2)
     //     .enable_all()
@@ -116,7 +109,7 @@ async fn my_app(app_handle: AppHandle) {
 
     tauri::async_runtime::spawn(start_websocket(listener_clone, state.clone(), app_handle, ip));
 
-    let port = listener.local_addr().unwrap().port();
+    
     println!("WebSocket server started on ws://{}:{}", ip, port);
 
     tauri::async_runtime::spawn(async move {
@@ -133,7 +126,9 @@ async fn my_app(app_handle: AppHandle) {
 #[tokio::main]
 async fn main() {
    
-    let app_secrets = AppSecrets::default();
+    let app_app_state = AppState::default();
+
+    
 
    
 
@@ -143,7 +138,7 @@ async fn main() {
     
     tauri::Builder::default()
         .setup(setup)
-        .manage(app_secrets)
+        .manage(app_app_state)
         // .manage(state)
         // .manage(listener.clone())
         .invoke_handler(tauri::generate_handler![
@@ -164,7 +159,7 @@ async fn find_available_port() -> Result<Arc<TcpListener>, std::io::Error> {
 
 async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, app_handle: AppHandle, ip: std::net::IpAddr) {
     loop {
-        // println!("test {}", secrets.get_secret());
+        // println!("test {}", app_state.get_secret());
         match listener.accept().await {
             
             Ok((stream, _)) => {
@@ -194,11 +189,12 @@ async fn handle_connection(
         }
     };
 
-    let secrets = app_handle.state::<AppSecrets>();
+    let app_state = app_handle.state::<AppState>();
 
     let peer_ip = peer_addr.ip().to_string();
     let mut client_id = "unknown".to_string();
     let mut device_type = "unknown".to_string();
+    let mut device_model = "unknown".to_string();
     let mut provided_secret = None;
 
    
@@ -234,7 +230,11 @@ async fn handle_connection(
             if let Ok(json) = serde_json::from_str::<Value>(text) {
                 eprintln!("Received initial message: {}", text);
                 client_id = json["clientId"].as_str().unwrap_or("unknown").to_string();
-                device_type = detect_device_type(json["device"].as_str().unwrap_or(""));
+                device_type = detect_device_type(json["device"]["device"]["type"].as_str().unwrap_or(""));
+                device_model = format!(
+                    "{}",json["device"]["device"]["model"].as_str().unwrap_or("")
+                );
+                
                 provided_secret = json["secret"].as_str().map(|s| s.to_string());
             }
         }
@@ -243,7 +243,7 @@ async fn handle_connection(
     // Authenticate client
     if peer_ip != server_ip.to_string() {
         match provided_secret {
-            Some(secret) if Some(&secret) == secrets.get_secret().as_ref() => {
+            Some(secret) if Some(&secret) == app_state.get_secret().as_ref() => {
                 eprintln!("Client authenticated: {}", client_id);
             }
             _ => {
@@ -265,9 +265,51 @@ async fn handle_connection(
             PeerInfo {
                 sender: tx.clone(),
                 device_type: device_type.clone(),
+                device: device_model.clone()
             },
         );
     }
+
+
+    let server_info = app_state.get_server_data().unwrap();
+
+
+    // Emit different events based on device type (mobile or desktop)
+   // Construct the client message to send device and server info
+    let client_message = json!({
+        "action": "server_info",
+        "server": {
+            "ip": server_info.ip,
+            "port": server_info.port,
+            // "status": server_info.status,
+            "device_type": server_info.device_type,
+            "server_name": server_info.server_name,
+        }
+    });
+
+    println!("device type: {}", device_type);
+    // Emit event for mobile client
+    if device_type == "mobile" {
+        app_handle.emit(
+            "new_mobile_peer_added",
+            SerializablePeerInfo {
+                client_id: client_id.to_string(),
+                device_type: device_type.to_string(),
+                device: device_model.to_string(),
+            },
+        ).unwrap_or_else(|e| eprintln!("Failed to emit new_mobile_peer_added event: {}", e));
+
+        // Send the message to the mobile client
+      
+        if  write.send(Message::Text(client_message.to_string())).await.is_err() {
+            eprintln!("Failed to send message to mobile client");
+        } else {
+            println!{"message sent to mobile client"}
+        }
+       
+    }
+   
+
 
     // Spawn a task for incoming messages
     let state_clone = state.clone();
@@ -317,15 +359,19 @@ async fn forward_to_mobile(state: PeerMap, payload: String) {
 
 
 
-fn detect_device_type(user_agent: &str) -> String {
-    if user_agent.contains("Mobile") {
+fn detect_device_type(device_type: &str) -> String {
+    // Log the raw input for debugging
+
+    // Simple device type detection based on string contents
+    if device_type=="smartphone" {
         "mobile".to_string()
-    } else if user_agent.contains("Windows") || user_agent.contains("Macintosh") || user_agent.contains("Linux") {
+    } else if device_type == "desktop" {
         "desktop".to_string()
     } else {
         "unknown".to_string()
     }
 }
+
 
 
 // async fn forward_to_mobile(state: PeerMap, payload: String) {

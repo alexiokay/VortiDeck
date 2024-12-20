@@ -7,7 +7,24 @@
   </Html>
 </template>
 
-<script lang="ts" setup></script>
+<script lang="ts" setup>
+// import { listen } from "@tauri-apps/api/event";
+// import { useMobileStore } from "@/stores/Mobile";
+
+// type Device = {
+//   client_id: string;
+//   device_type: string;
+//   device: string;
+// };
+
+// const mobileStore = useMobileStore();
+// listen<Device>("new_peer_added", (event) => {
+//   console.log(`peer ${event.payload.deviceType} added`);
+//   console.log(event.payload);
+//   mobileStore.addPeer(event.payload);
+//   console.log(mobileStore.paired);
+// });
+</script>
 
 <style lang="scss">
 .page-enter-active,

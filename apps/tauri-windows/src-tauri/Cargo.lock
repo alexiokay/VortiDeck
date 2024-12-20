@@ -157,6 +157,7 @@ dependencies = [
  "local-ip-address",
  "log",
  "mdns-sd",
+ "platform-info",
  "qrcode",
  "serde",
  "serde_json",
@@ -3265,6 +3266,16 @@ name = "pkg-config"
 version = "0.3.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "953ec861398dccce10c670dfeaf3ec4911ca479e9c02154b3a215178c5f566f2"
+
+[[package]]
+name = "platform-info"
+version = "2.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "91077ffd05d058d70d79eefcd7d7f6aac34980860a7519960f7913b6563a8c3a"
+dependencies = [
+ "libc",
+ "winapi",
+]
 
 [[package]]
 name = "plist"

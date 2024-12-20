@@ -17,7 +17,7 @@ use tokio::sync::Mutex as TokioMutex;
 use tauri::State;
 use std::sync::Mutex;
 mod shared_state;
-use crate::shared_state::AppSecrets;
+use crate::shared_state::AppState;
 
 type PeerMap = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 
@@ -36,8 +36,8 @@ enum Error {
 #[tokio::main]
 async fn main() {
     let state: PeerMap = Arc::new(TokioMutex::new(HashMap::new()));
-    let app_secrets = AppSecrets::default();
-    let system_state = Arc::new(Mutex::new(AppSecrets::default()));
+    let app_secrets = AppState::default();
+    let system_state = Arc::new(Mutex::new(AppState::default()));
 
     let ws_secret_key = system_state.lock().unwrap().get_secret().unwrap_or_default(); // Fetch the secret
 

@@ -17,5 +17,8 @@
     "nuxt": "^3.14.1592",
     "typescript": "^5.7.2",
     "vue": "latest"
+  },
+  "dependencies": {
+    "device-detector-js": "^3.0.3"
   }
 }

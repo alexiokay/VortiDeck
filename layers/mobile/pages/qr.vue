@@ -5,8 +5,10 @@
   </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
 import { scan, Format, cancel } from "@tauri-apps/plugin-barcode-scanner";
+import DeviceDetector from "device-detector-js";
+
+const deviceDetector = new DeviceDetector();
 
 // interface ScannedData {
 //   key: String;
@@ -38,10 +40,12 @@ const connectToWebsocket = (wsUrl: string, key: string) => {
       clientId = crypto.randomUUID(); // Generate a unique ID
       localStorage.setItem("clientId", clientId);
     }
+    const userAgent = navigator.userAgent;
+    const device = deviceDetector.parse(userAgent);
 
     // Send authentication or handshake message with secret key
     const authMessage = JSON.stringify({
-      device: navigator.userAgent,
+      device: device,
       action: "authenticate",
       clientId,
       secret: key,
@@ -57,6 +61,10 @@ const connectToWebsocket = (wsUrl: string, key: string) => {
     if (message.action === "component") {
       // Handle component update
       console.log("Component action received:", message.payload);
+    }
+    if (message.action === "server_info") {
+      // paired.value?.push(message)
+      alert(JSON.stringify(message.server));
     }
   };
 };

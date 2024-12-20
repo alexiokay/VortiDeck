@@ -9,7 +9,7 @@ use uuid::Uuid;
 use local_ip_address::local_ip;
 use std::sync::Mutex;
 use tauri::State;
-use crate::shared_state::AppSecrets;
+use crate::shared_state::AppState;
 
 
 fn get_hostname() -> String {
@@ -19,7 +19,7 @@ fn get_hostname() -> String {
 }
 
 #[tauri::command]
-pub fn generate_qr_code(data: Option<String>, state: State<AppSecrets>) -> Result<String, String> {
+pub fn generate_qr_code(data: Option<String>, state: State<AppState>) -> Result<String, String> {
     let secret_key = Uuid::new_v4().to_string();
     
     state.set_secret(secret_key.clone());

@@ -11,6 +11,15 @@
   --border: #eaeaea;
   --border2: #dedede;
   --invert: invert(0);
+
+  --connected: rgb(34, 147, 75);
+  --connectedBg: rgb(220, 252, 231);
+  --disconnected: rgb(185, 28, 28);
+  --disconnectedBg: rgb(254, 226, 226);
+  --connecting: rgb(253, 126, 20);
+  --connectingBg: rgb(250, 186, 133);
+  --paired: rgb(0, 123, 255);
+  --pairedBg: rgb(225, 237, 248);
 }
 
 .between-lines {

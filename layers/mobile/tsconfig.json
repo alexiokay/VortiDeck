@@ -1,3 +1,24 @@
 {
-  "extends": "./.playground/.nuxt/tsconfig.json"
+  "extends": "./.playground/.nuxt/tsconfig.json",
+  "include": [
+    "env.d.ts",
+    ".nuxt/nuxt.d.ts",
+    "**/*",
+    "*.vue",
+    "*.ts",
+    "*.tsx",
+    "*.js",
+    "*.jsx",
+    "*.json",
+    "*.md",
+    "*.yml"
+  ],
+  "vueCompilerOptions": {
+    "plugins": ["volar-service-pug", "@vue/language-plugin-pug"]
+  },
+  "compilerOptions": {
+    "esModuleInterop": true
+  },
+  "typeRoots": ["./node_modules/@types", "./src"],
+  "exclude": ["node_modules"]
 }

@@ -1,13 +1,13 @@
 <template lang="pug">
   div(class="grid grid-cols-3 gap-x-4 lg:gap-x-8 ")
     div(class="flex flex-col p-6 rounded-xl bg-white gap-y-5 shadow-sm")
-        div(class="flex w-full justify-between items-center")
+        div(class="flex w-full justify-between items-center gap-x-2")
           p(class="font-semibold") Connection Status
-          div(class=" flex px-3 py-1 items-center justify-center bg-green-100  text-green-700 text-sm  rounded-full")
-            span Connected
-        div(class="flex w-full gap-x-2")
+          div(:class="statusClasses" class=" flex px-3 py-1 items-center justify-center text-sm  rounded-full")
+            span {{connectionStore.getStatus}}
+        div(class="flex w-full gap-x-2" v-for="(device, idx) in connectionStore.getPaired" :key="idx")
           BiPhone(class="w-6 h-6 ")
-          span Iphone 14 Pro
+          span {{device.device}}
     div(class="flex flex-col p-6 rounded-xl bg-white gap-y-5 shadow-sm")
         div(class="flex w-full justify-between items-center")
           p(class="font-semibold") Premium Status
@@ -26,13 +26,34 @@
 import { onMounted } from "vue";
 import BiPhone from "~icons/bi/phone?width=16px&height=16px";
 import Fa6SolidCrown from "~icons/fa6-solid/crown?width=648px&height=576px";
+import { useConnectionStore } from "@/stores/Connection";
+
 const { $socket } = useNuxtApp();
+const connectionStore = useConnectionStore();
 
 const sendMessage = () => {
   console.log("sending message");
   $socket.value.send("Hello, Tauri");
   // console.log("Message sent to server");
 };
+
+const statusClasses = computed(() => {
+  return [
+    connectionStore.getStatus === "paired"
+      ? "bg-themePairedBg text-themePaired"
+      : "",
+    connectionStore.getStatus === "connecting"
+      ? "bg-themeConnectingBg text-themeConnecting"
+      : "",
+
+    connectionStore.getStatus === "disconnected"
+      ? "bg-themeDisconnectedBg text-themeDisconnected"
+      : "",
+    connectionStore.getStatus === "connected"
+      ? "bg-themeConnectedBg text-themeConnected"
+      : "",
+  ];
+});
 </script>
 
 <style lang="scss"></style>

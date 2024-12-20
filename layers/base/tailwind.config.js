@@ -31,6 +31,15 @@ module.exports = {
         themeBorder2: "var(--border2)",
         themeInvert: "var(--invert)",
         themeButton: "var(--button)",
+
+        themeConnected: "var(--connected)",
+        themeConnectedBg: "var(--connectedBg)",
+        themeDisconnected: "var(--disconnected)",
+        themeDisconnectedBg: "var(--disconnectedBg)",
+        themeConnecting: "var(--connecting)",
+        themeConnectingBg: "var(--connectingBg)",
+        themePaired: "var(--paired)",
+        themePairedBg: "var(--pairedBg)",
       },
       keyframes: {
         showUp: {

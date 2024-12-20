@@ -1,6 +1,30 @@
 import { invoke } from "@tauri-apps/api/core";
+import DeviceDetector from "device-detector-js";
+import { useConnectionStore } from "@/stores/Connection";
+import { listen } from "@tauri-apps/api/event";
+
+type Device = {
+  client_id: string;
+  device_type: string;
+  device: string;
+};
 
 export default defineNuxtPlugin(() => {
+  const deviceDetector = new DeviceDetector();
+  const connectionStore = useConnectionStore();
+  const config = useRuntimeConfig();
+  const socket = ref<WebSocket | null>(null); // Reactive WebSocket instance
+  const isWebSocketConnected = ref(false); // Reactive connection status
+
+  const paired: Ref<Device[] | null> = ref([]);
+
+  listen<Device>("new_mobile_peer_added", (event) => {
+    console.log(`peer ${event.payload.deviceType} added`);
+    console.log(event.payload);
+    connectionStore.addPeer(event.payload);
+    connectionStore.setStatus("paired");
+  });
+
   // Define the return type of discoverService
   interface ServiceInfo {
     name: string;
@@ -24,10 +48,6 @@ export default defineNuxtPlugin(() => {
       return null; // Return null in case of error
     }
   }
-
-  const config = useRuntimeConfig();
-  const socket = ref<WebSocket | null>(null); // Reactive WebSocket instance
-  const isWebSocketConnected = ref(false); // Reactive connection status
 
   let reconnectInterval: number | null = null;
 
@@ -70,11 +90,15 @@ export default defineNuxtPlugin(() => {
     socket.value.onopen = () => {
       console.log("WebSocket connection established");
       isWebSocketConnected.value = true;
+      connectionStore.setStatus("connected");
+
+      const userAgent = navigator.userAgent;
+      const device = deviceDetector.parse(userAgent);
 
       // Send initial device information
       socket.value?.send(
         JSON.stringify({
-          device: navigator.userAgent,
+          device: device,
           clientId,
           action: "connect",
         })
@@ -94,6 +118,7 @@ export default defineNuxtPlugin(() => {
     socket.value.onclose = (event) => {
       console.log("WebSocket connection closed:", event);
       isWebSocketConnected.value = false;
+      connectionStore.setStatus("disconnected");
       if (!event.wasClean) {
         attemptReconnect();
       }
@@ -108,6 +133,7 @@ export default defineNuxtPlugin(() => {
 
   // Function to handle reconnection logic
   const attemptReconnect = () => {
+    connectionStore.setStatus("connecting");
     if (reconnectInterval === null) {
       reconnectInterval = setInterval(() => {
         console.log("Attempting to reconnect...");
@@ -123,6 +149,7 @@ export default defineNuxtPlugin(() => {
     provide: {
       socket,
       isWebSocketConnected,
+      paired,
     },
   };
 });

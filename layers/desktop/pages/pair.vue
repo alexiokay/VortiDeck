@@ -29,12 +29,12 @@ async function getQRCode(data: string | null = null): Promise<void> {
     // Safely invoke the Tauri command and pass the optional data parameter
     const response = await invoke("generate_qr_code", { data });
 
-    console.log(response);
+    // console.log(response);
 
     // Set the base64 image source for the QR code
     qrCodeImage.value = `data:image/png;base64,${response}`;
   } catch (error) {
-    console.error("Failed to generate QR code:", error);
+    // console.error("Failed to generate QR code:", error);
     qrCodeImage.value = null;
     qrData.value = null;
   }
