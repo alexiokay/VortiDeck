@@ -2,7 +2,7 @@
   div(class="grid grid-cols-3 gap-x-4 lg:gap-x-8 ")
     div(class="flex flex-col p-6 rounded-xl bg-white gap-y-5 shadow-sm")
         div(class="flex w-full justify-between items-center gap-x-2")
-          p(class="font-semibold") Connection Status
+          p(class="font-semibold") Paired Devices
           div(:class="statusClasses" class=" flex px-3 py-1 items-center justify-center text-sm  rounded-full")
             span {{connectionStore.getStatus}}
         div(class="flex w-full gap-x-2" v-for="(device, idx) in connectionStore.getPaired" :key="idx")
@@ -18,7 +18,7 @@
           span Valid until March 2025
 
        
-  p ssas
+
   button( @click="sendMessage()") send Message
 </template>
 
@@ -28,8 +28,9 @@ import BiPhone from "~icons/bi/phone?width=16px&height=16px";
 import Fa6SolidCrown from "~icons/fa6-solid/crown?width=648px&height=576px";
 import { useConnectionStore } from "@/stores/Connection";
 
-const { $socket } = useNuxtApp();
 const connectionStore = useConnectionStore();
+
+const { $socket } = useNuxtApp();
 
 const sendMessage = () => {
   console.log("sending message");
@@ -37,23 +38,7 @@ const sendMessage = () => {
   // console.log("Message sent to server");
 };
 
-const statusClasses = computed(() => {
-  return [
-    connectionStore.getStatus === "paired"
-      ? "bg-themePairedBg text-themePaired"
-      : "",
-    connectionStore.getStatus === "connecting"
-      ? "bg-themeConnectingBg text-themeConnecting"
-      : "",
-
-    connectionStore.getStatus === "disconnected"
-      ? "bg-themeDisconnectedBg text-themeDisconnected"
-      : "",
-    connectionStore.getStatus === "connected"
-      ? "bg-themeConnectedBg text-themeConnected"
-      : "",
-  ];
-});
+const statusClasses = useConnectionStatus;
 </script>
 
 <style lang="scss"></style>

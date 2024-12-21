@@ -16,7 +16,7 @@ use local_ip_address::local_ip;
 mod shared_state;
 use crate::shared_state::AppState;
 use crate::shared_state::{PeerState, PeerInfo, SerializablePeerInfo};
-
+use serde::Deserialize;
 use tauri::{AppHandle, Emitter};
 use std::net::IpAddr;
 use serde::Serialize;
@@ -32,6 +32,12 @@ use serde_json::json;
 //     device_type: String, // "mobile" or "desktop"
 //     device: String,
 // }
+
+#[derive(Deserialize, Serialize)]
+struct CommandMessage {
+    action: String,
+    command: String,
+}
 
 
 
@@ -329,6 +335,13 @@ async fn handle_connection(
                         if action == "component" {
                             // forward_to_mobile(state_clone.clone(), json.to_string()).await;
                         }
+                        if action == "command" {
+                            if let Some(command) = json["command"].as_str() {
+                                execute_command(command).await;
+                            } else {
+                                println!("No command found in message");
+                            }
+                        }
                     }
                 }
             }
@@ -418,4 +431,30 @@ async fn get_serialized_peers_excluding_server(app_handle: AppHandle) -> Vec<Ser
             device: peer.device.clone(),
         })
         .collect()
+}
+
+
+// Function to execute a command
+use enigo::{
+    Button, Coordinate,
+    Direction::{Click, Press, Release},
+    Enigo, Key, Keyboard, Mouse, Settings,
+};use device_query::{DeviceQuery, DeviceState, Keycode};
+
+            
+async fn execute_command(command: &str) {
+    match command {
+        "backspace" => {
+            // let device_state = DeviceState::new();
+            // let keys = device_state.get_keys();
+            // println!("pressed: {}", keys);
+            println!("Pressing backspace...");
+            let mut enigo = Enigo::new(&Settings::default()).unwrap();
+            enigo.key(Key::Backspace, Click); // Simulate backspace key press
+
+        },
+        _ => {
+            println!("Unknown command: {}", command);
+        }
+    }
 }

@@ -1,15 +1,16 @@
 <template lang="pug">
 div(class="theme-default")
-    div(id="qr" style="" class=" h-auto flex flex-row justify-center bg-themeBackground items-start w-full   ")
+  div(class="flex flex-col justify-end h-screen")
+    div(id="qr" style="" class=" flex h-full flex-col items-start w-full   ")
         <slot class="" />
         //- Sidebar(class="" )
-        NavBottom(class="fixed bottom-0 bg-white")
+  
         
           //- mt-[9.1dvh]
           //- //min-h-[calc(100dvh-18.2dvh)]
         
           <!-- Footer(v-if="route.path!=='/login' && route.path!=='/signup'" class="mt-12") -->
-    div(class="cursor cursor--small")
+  div(class="cursor cursor--small")
    
     
     </template>

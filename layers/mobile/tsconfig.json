@@ -11,7 +11,11 @@
     "*.jsx",
     "*.json",
     "*.md",
-    "*.yml"
+    "*.yml",
+    "../desktop/plugins/GetTauriStateOnRefresh.ts",
+    "../desktop/plugins/GetTauriStateOnRefresh.ts",
+    "../base/stores/Mobile.ts",
+    "../base/stores/Mobile.ts"
   ],
   "vueCompilerOptions": {
     "plugins": ["volar-service-pug", "@vue/language-plugin-pug"]

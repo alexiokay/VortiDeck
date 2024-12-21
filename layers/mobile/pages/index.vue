@@ -1,21 +1,29 @@
 <template lang="pug">
-   
-    div(v-if="$isWebSocketConnected" class="flex items-center gap-x-2 ml-auto relative group")
-        div(class="w-3 h-3 bg-green-600 rounded-full group")
-        p(class="text-green-600") Connected
-        p connected 
-        div(class="absolute group-hover:flex hidden top-[2rem] left-[0.1rem] bg-themeBackground2 px-3 py-2 shadow-md text-nowrap rounded-lg	") OnePlus 11
-        
+div(class=" flex flex-col gap-y-4")
+  div(class="flex flex-col p-6 rounded-xl bg-white gap-y-3 shadow-sm"  @click="isShowMore = !isShowMore")
+    div(class="flex w-full justify-between items-center gap-x-2")
+      p(class="font-semibold") Pairing Status
+      div(:class="useConnectionStatus" class=" flex px-3 py-1 items-center justify-center text-sm  rounded-full")
+        span {{connectionStore.getStatus}}
+    div(class="flex flex-col gap-y-4" v-if="isShowMore && connectionStore.getStatus === 'paired'")
+      hr(class="w-full h-[1px] my-1")
+      div(class="flex w-full gap-x-2 " v-for="(info, idx) in connectionStore.getPaired" :key="idx")
+        p(class="w-[10rem]") {{idx}}: 
+        div(class="bg-themeBackground w-full h-auto flex px-3 py-1")
+          p {{ info }} 
+            //- div(class="absolute group-hover:flex hidden top-[2rem] left-[0.1rem] bg-themeBackground2 px-3 py-2 shadow-md text-nowrap rounded-lg	") OnePlus 11
+          
+  button(@click="sendMessage()" class=" px-3 py-2 bg-white rounded-md") send message to desktop
 
-    div(v-else class="flex items-center gap-x-2 ml-auto relative group")
-        div( class="w-3 h-3 bg-red-600 rounded-full group")
-        p(class="text-red-600") Disconnected
-    button(@click="sendMessage()" class=" px-3 py-2 bg-white rounded-md") send message to desktop
+  DeckDynamic
 </template>
 
 <script setup lang="ts">
+import { useConnectionStore } from "@/stores/Connection";
 const { $socket, $isWebSocketConnected } = useNuxtApp();
+const connectionStore = useConnectionStore();
 
+const isShowMore = ref(false);
 // $socket.value.onmessage = (event) => {
 //   const message = JSON.parse(event.data);
 //   alert("test");

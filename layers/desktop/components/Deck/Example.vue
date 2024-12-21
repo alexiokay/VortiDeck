@@ -1,8 +1,8 @@
 <template lang="pug">
-div(class="inner-element")
-    p test
-</template>
+    div(class="w-full h-auto grid grid-cols-4 gap-4")
+        DeckDefaultButton(v-for="(item, index) in 12")
+    </template>
 
 <script setup lang="ts"></script>
 
-<style lang="scss" scoped></style>
+<style lang="scss"></style>

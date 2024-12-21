@@ -40,6 +40,8 @@ qrcode = { version = "0.14.1", default-features = true }
 image = "0.25.5"
 base64 = "0.22.1"
 platform-info = "2.0.4"
+device_query = "2.1.0"
+enigo = "0.3.0"
 
 [dependencies.uuid]
 version = "1.11.0"

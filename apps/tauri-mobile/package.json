@@ -21,5 +21,8 @@
     "nuxt": "^3.14.1592",
     "vue": "latest",
     "vue-router": "latest"
+  },
+  "devDependencies": {
+    "@iconify-json/marketeq": "^1.2.2"
   }
 }
