@@ -50,8 +50,16 @@ async fn advertise_service(ip: String, port: u16) -> Result<(), zeroconf::error:
         Ok(registration) => info!("Service successfully registered: {:?}", registration),
         Err(e) => error!("Failed to register service: {}", e),
     }));
-
     let event_loop = service.register()?;
+    match service.register() {
+        Ok(event_loop) => {
+            let event_loop = Arc::new(Mutex::new(event_loop));
+        },
+        Err(e) => {
+            eprintln!("Failed to register service: {}", e);
+            return Err(e);
+        }
+    }
 
     // Parse and log the service address
     let addr = SocketAddrV4::new(

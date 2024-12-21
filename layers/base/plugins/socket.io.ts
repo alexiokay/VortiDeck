@@ -15,14 +15,15 @@ export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
   const socket = ref<WebSocket | null>(null); // Reactive WebSocket instance
   const isWebSocketConnected = ref(false); // Reactive connection status
-
+  const router = useRouter();
   const paired: Ref<Device[] | null> = ref([]);
 
-  listen<Device>("new_mobile_peer_added", (event) => {
+  listen<Device>("new_mobile_peer_added", async (event) => {
     console.log(`peer ${event.payload.deviceType} added`);
     console.log(event.payload);
-    connectionStore.addPeer(event.payload);
+    connectionStore.setPeers(event.payload);
     connectionStore.setStatus("paired");
+    router.push("/");
   });
 
   // Define the return type of discoverService

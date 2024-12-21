@@ -13,13 +13,10 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 use tokio::sync::broadcast;
 use serde_json::Value;
 use local_ip_address::local_ip;
-use tauri::State;
-use std::sync::Mutex;
 mod shared_state;
 use crate::shared_state::AppState;
-use crate::shared_state::{PeerState, PeerInfo};
+use crate::shared_state::{PeerState, PeerInfo, SerializablePeerInfo};
 
-use tauri::App;
 use tauri::{AppHandle, Emitter};
 use std::net::IpAddr;
 use serde::Serialize;
@@ -36,13 +33,7 @@ use serde_json::json;
 //     device: String,
 // }
 
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct SerializablePeerInfo  {
-    client_id: String,
-    device_type: String, // Keep only serializable fields
-    device: String,
-}
+
 
 #[derive(Debug, thiserror::Error)]
 enum Error {
@@ -51,7 +42,6 @@ enum Error {
 }
 
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-    use std::thread;
 
     // let test = Manager::state::<AppState>(app);
     let app_handle = app.handle().clone();
@@ -146,7 +136,8 @@ async fn main() {
         // .manage(listener.clone())
         .invoke_handler(tauri::generate_handler![
             commands::generate_qr_code::generate_qr_code,
-            commands::discover_websocket::discover_websocket
+            commands::discover_websocket::discover_websocket,
+            commands::retrieve_peers::retrieve_peers,
         ])
         
         .run(tauri::generate_context!())
@@ -267,6 +258,7 @@ async fn handle_connection(
             client_id.clone(),
             PeerInfo {
                 client_id: client_id.clone(),
+                ip: peer_ip.clone().parse().expect("Invalid IP format"),
                 sender: tx.clone(),
                 device_type: device_type.clone(),
                 device: device_model.clone()
@@ -294,14 +286,23 @@ async fn handle_connection(
     println!("device type: {}", device_type);
     // Emit event for mobile client
     if device_type == "mobile" {
-        app_handle.emit(
-            "new_mobile_peer_added",
-            SerializablePeerInfo {
-                client_id: client_id.to_string(),
-                device_type: device_type.to_string(),
-                device: device_model.to_string(),
-            },
-        ).unwrap_or_else(|e| eprintln!("Failed to emit new_mobile_peer_added event: {}", e));
+        // Clone the app_handle and await the future result
+  
+        let peers = get_serialized_peers_excluding_server(app_handle.clone()).await;
+
+        // Safely emit the event after obtaining the result
+        app_handle.emit("new_mobile_peer_added", peers).unwrap_or_else(|e| {
+            eprintln!("Failed to emit new_mobile_peer_added event: {}", e);
+        });
+
+        // app_handle.emit(
+        //     "new_mobile_peer_added",
+        //     SerializablePeerInfo {
+        //         client_id: client_id.to_string(),
+        //         device_type: device_type.to_string(),
+        //         device: device_model.to_string(),
+        //     },
+        // ).unwrap_or_else(|e| eprintln!("Failed to emit new_mobile_peer_added event: {}", e));
 
         // Send the message to the mobile client
       
@@ -316,7 +317,7 @@ async fn handle_connection(
 
 
     // Spawn a task for incoming messages
-    let state_clone = state.clone();
+    // let state_clone = state.clone();
     let client_id_clone = client_id.clone();
 
     tokio::spawn(async move {
@@ -386,3 +387,35 @@ fn detect_device_type(device_type: &str) -> String {
 //         }
 //     }
 // }
+
+
+async fn get_serialized_peers_excluding_server(app_handle: AppHandle) -> Vec<SerializablePeerInfo> {
+    let app_state = app_handle.state::<AppState>();
+    let peer_state = app_handle.state::<PeerState>();
+
+    let peers = peer_state.peer_map.lock().await;
+
+    // Log server data to verify if it returns Some or None
+    if let Some(server_data) = app_state.get_server_data() {
+        println!("Server IP: {}", server_data.ip);
+    } else {
+        println!("Server IP is not set.");
+    }
+
+    let server_ip = app_state.get_server_data().map(|data| data.ip);
+
+    // Create a serializable list of PeerInfo, excluding the server peer by IP
+    peers.values()
+        .filter(|peer| {
+            match &server_ip {
+                Some(ip) => &peer.ip != ip, // Exclude server peer if IP matches
+                None => true, // If no server IP, include all peers
+            }
+        })
+        .map(|peer| SerializablePeerInfo {
+            client_id: peer.client_id.clone(),
+            device_type: peer.device_type.clone(),
+            device: peer.device.clone(),
+        })
+        .collect()
+}

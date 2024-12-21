@@ -4,11 +4,23 @@ use std::net::IpAddr;
 use tokio::sync::broadcast;
 use std::collections::HashMap;
 use tokio_tungstenite::{tungstenite::Message};
+use serde::Serialize;
+use tauri::{AppHandle};
+use tauri::Manager;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SerializablePeerInfo  {
+    pub client_id: String,
+    pub device_type: String, // Keep only serializable fields
+    pub device: String,
+}
 
 
 #[derive(Debug, Clone)]
 pub struct PeerInfo {
     pub client_id: String, // Add client_id here
+    pub ip:  IpAddr,
     pub sender: broadcast::Sender<Message>,
     pub device_type: String, // "mobile" or "desktop"
     pub device: String,
@@ -26,6 +38,42 @@ impl Default for PeerState {
     }
 }
 
+// impl PeerState {
+//     pub async fn get_serialized_peers_excluding_server(&self, app_handle: AppHandle) -> Vec<SerializablePeerInfo> {
+//         let app_state = app_handle.state::<AppState>();
+
+//         let peers = self.peer_map.lock().await;
+
+//         // Log server data to verify if it returns Some or None
+//         if let Some(server_data) = app_state.get_server_data() {
+//             println!("Server IP: {}", server_data.ip);
+//         } else {
+//             println!("Server IP is not set.");
+//         }
+
+//         let server_ip = app_state.get_server_data().map(|data| data.ip);
+
+        
+
+//         // Create a serializable list of PeerInfo, excluding the server peer by client_id
+//         peers.values()
+//             .filter(|peer| {
+//                 match &server_ip {
+//                     Some(ip) => &peer.ip != ip, // Exclude server peer if ip matches
+
+//                     None => true, // If no server client_id, don't exclude any peers
+//                 }
+//             })
+//             .map(|peer| SerializablePeerInfo {
+//                 client_id: peer.client_id.clone(),
+//                 device_type: peer.device_type.clone(),
+//                 device: peer.device.clone(),
+//             })
+//             .collect()
+//     }
+// }
+
+
 //////////////////////////////////////////////////////////////////
 
 #[derive(Clone, Debug)]
@@ -37,9 +85,10 @@ pub struct ServerInfo {
     pub server_name: String,
 }
 impl Default for ServerInfo {
+    
     fn default() -> Self {
         ServerInfo {
-            ip: IpAddr::V4("127.0.0.1".parse().unwrap()),  // Default to localhost IPv4 address
+            ip: "127.0.0.1".parse::<IpAddr>().expect("Invalid IP address format"),  // Default to localhost IPv4 address
             port: 9001,  // Default port
             // status: "offline".to_string(),  // Default status
             device_type: "unknown".to_string(),  // Default device type
@@ -47,15 +96,37 @@ impl Default for ServerInfo {
         }
     }
 }
+ //////////////////////////////////////////////////////////////
 
 #[derive(Default)]
 pub struct AppState {
     secret: RwLock<Option<String>>, // Thread-safe read/write lock
     server_data: RwLock<Option<ServerInfo>>,
+    server_client_id: RwLock<Option<String>>,
     
 }
 
 impl AppState {
+
+    // Set the server client ID. This will write to the RwLock.
+    pub fn set_server_client_id(&self, new_server_client_id: String) {
+        if let Ok(mut server_client_id) = self.server_client_id.write() {
+            *server_client_id = Some(new_server_client_id);
+        } else {
+            eprintln!("Failed to acquire write lock while setting server_client_id");
+        }
+    }
+
+    // Get the server client ID. This will read from the RwLock.
+    pub fn get_server_client_id(&self) -> Option<String> {
+        if let Ok(server_client_id) = self.server_client_id.read() {
+            server_client_id.clone() // Return a clone of the Option<String>
+        } else {
+            eprintln!("Failed to acquire read lock while retrieving server_client_id");
+            None
+        }
+    }
+
     // Set a new secret
     pub fn set_secret(&self, secret_key: String) {
         if let Ok(mut secret) = self.secret.write() {

@@ -10,6 +10,7 @@ export default defineNuxtPlugin(async () => {
       // Safely invoke the Tauri command
       const result = await invoke<PeerInfo[]>("retrieve_peers");
       console.log("retrieved peers:", result); // Log the result
+      connectionStore.setPeers(result);
 
       return result; // Return the list of services
     } catch (error) {
