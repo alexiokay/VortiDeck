@@ -13,11 +13,12 @@ use tokio_tungstenite::{accept_async, tungstenite::Message};
 use tokio::sync::broadcast;
 use serde_json::Value;
 use local_ip_address::local_ip;
-use tokio::sync::Mutex as TokioMutex;
 use tauri::State;
 use std::sync::Mutex;
 mod shared_state;
 use crate::shared_state::AppState;
+use crate::shared_state::{PeerState, PeerInfo};
+
 use tauri::App;
 use tauri::{AppHandle, Emitter};
 use std::net::IpAddr;
@@ -25,14 +26,15 @@ use serde::Serialize;
 use platform_info::*;
 use serde_json::json;
 
-type PeerMap = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
+// type PeerState = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 
-#[derive(Debug, Clone)]
-struct PeerInfo {
-    sender: broadcast::Sender<Message>,
-    device_type: String, // "mobile" or "desktop"
-    device: String,
-}
+// #[derive(Debug, Clone)]
+// struct PeerInfo {
+//     client_id: String, // Add client_id here
+//     sender: broadcast::Sender<Message>,
+//     device_type: String, // "mobile" or "desktop"
+//     device: String,
+// }
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -71,7 +73,7 @@ async fn my_app(app_handle: AppHandle) {
 
     
 
-    let state: PeerMap = Arc::new(TokioMutex::new(HashMap::new()));
+    // let state: PeerState = Arc::new(TokioMutex::new(HashMap::new()));
 
     // let test = app_handle.state::<AppState>();
 
@@ -107,7 +109,7 @@ async fn my_app(app_handle: AppHandle) {
 
     let listener_clone = listener.clone();
 
-    tauri::async_runtime::spawn(start_websocket(listener_clone, state.clone(), app_handle, ip));
+    tauri::async_runtime::spawn(start_websocket(listener_clone, app_handle, ip));
 
     
     println!("WebSocket server started on ws://{}:{}", ip, port);
@@ -126,8 +128,8 @@ async fn my_app(app_handle: AppHandle) {
 #[tokio::main]
 async fn main() {
    
-    let app_app_state = AppState::default();
-
+    let app_state = AppState::default();
+    let peer_state = PeerState::default();
     
 
    
@@ -138,7 +140,8 @@ async fn main() {
     
     tauri::Builder::default()
         .setup(setup)
-        .manage(app_app_state)
+        .manage(app_state)
+        .manage(peer_state)
         // .manage(state)
         // .manage(listener.clone())
         .invoke_handler(tauri::generate_handler![
@@ -157,15 +160,15 @@ async fn find_available_port() -> Result<Arc<TcpListener>, std::io::Error> {
     Ok(listener)
 }
 
-async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, app_handle: AppHandle, ip: std::net::IpAddr) {
+async fn start_websocket(listener: Arc<TcpListener>, app_handle: AppHandle, ip: std::net::IpAddr) {
     loop {
         // println!("test {}", app_state.get_secret());
         match listener.accept().await {
             
             Ok((stream, _)) => {
-                let state = state.clone();
+            
               
-                tokio::spawn(handle_connection(stream, state, app_handle.clone(), ip));
+                tokio::spawn(handle_connection(stream, app_handle.clone(), ip));
             }
             Err(e) => {
                 eprintln!("Error accepting connection: {}", e);
@@ -177,7 +180,6 @@ async fn start_websocket(listener: Arc<TcpListener>, state: PeerMap, app_handle:
 
 async fn handle_connection(
     stream: TcpStream,
-    state: PeerMap,
     app_handle: AppHandle,
     server_ip: IpAddr,
 ) {
@@ -190,6 +192,7 @@ async fn handle_connection(
     };
 
     let app_state = app_handle.state::<AppState>();
+    let state = app_handle.state::<PeerState>();
 
     let peer_ip = peer_addr.ip().to_string();
     let mut client_id = "unknown".to_string();
@@ -259,10 +262,11 @@ async fn handle_connection(
 
     // Add client to peers map
     {
-        let mut peers = state.lock().await;
+        let mut peers = state.peer_map.lock().await;
         peers.insert(
             client_id.clone(),
             PeerInfo {
+                client_id: client_id.clone(),
                 sender: tx.clone(),
                 device_type: device_type.clone(),
                 device: device_model.clone()
@@ -322,7 +326,7 @@ async fn handle_connection(
                 if let Ok(json) = serde_json::from_str::<Value>(text) {
                     if let Some(action) = json["action"].as_str() {
                         if action == "component" {
-                            forward_to_mobile(state_clone.clone(), json.to_string()).await;
+                            // forward_to_mobile(state_clone.clone(), json.to_string()).await;
                         }
                     }
                 }
@@ -341,21 +345,21 @@ async fn handle_connection(
 
     // Remove client from peers map
     {
-        let mut peers = state.lock().await;
+        let mut peers = state.peer_map.lock().await;
         peers.remove(&client_id);
     }
 }
 
-async fn forward_to_mobile(state: PeerMap, payload: String) {
-    let peers = state.lock().await;
-    for (client_id, peer_info) in peers.iter() {
-        if peer_info.device_type == "mobile" {
-            if let Err(e) = peer_info.sender.send(Message::Text(payload.clone())) {
-                eprintln!("Failed to send message to {}: {}", client_id, e);
-            }
-        }
-    }
-}
+// async fn forward_to_mobile(state: PeerState, payload: String) {
+//     let peers = state.lock().await;
+//     for (client_id, peer_info) in peers.iter() {
+//         if peer_info.device_type == "mobile" {
+//             if let Err(e) = peer_info.sender.send(Message::Text(payload.clone())) {
+//                 eprintln!("Failed to send message to {}: {}", client_id, e);
+//             }
+//         }
+//     }
+// }
 
 
 
@@ -374,7 +378,7 @@ fn detect_device_type(device_type: &str) -> String {
 
 
 
-// async fn forward_to_mobile(state: PeerMap, payload: String) {
+// async fn forward_to_mobile(state: PeerState, payload: String) {
 //     let peers = state.lock().await;
 //     for (client_id, peer) in peers.iter() {
 //         if peer.device_type == "mobile" {

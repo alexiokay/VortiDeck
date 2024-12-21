@@ -1,5 +1,32 @@
 use std::sync::{Arc, RwLock};
+use tokio::sync::Mutex as TokioMutex;
 use std::net::IpAddr;
+use tokio::sync::broadcast;
+use std::collections::HashMap;
+use tokio_tungstenite::{tungstenite::Message};
+
+
+#[derive(Debug, Clone)]
+pub struct PeerInfo {
+    pub client_id: String, // Add client_id here
+    pub sender: broadcast::Sender<Message>,
+    pub device_type: String, // "mobile" or "desktop"
+    pub device: String,
+}
+// #[derive(Default)]
+pub struct PeerState {
+    pub peer_map: TokioMutex<HashMap<String, PeerInfo>>
+}
+
+impl Default for PeerState {
+    fn default() -> Self {
+        PeerState {
+            peer_map: TokioMutex::new(HashMap::new()),
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////
 
 #[derive(Clone, Debug)]
 pub struct ServerInfo {
@@ -25,6 +52,7 @@ impl Default for ServerInfo {
 pub struct AppState {
     secret: RwLock<Option<String>>, // Thread-safe read/write lock
     server_data: RwLock<Option<ServerInfo>>,
+    
 }
 
 impl AppState {
