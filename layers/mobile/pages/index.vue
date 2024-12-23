@@ -20,6 +20,8 @@ div(class=" flex flex-col gap-y-4")
 
 <script setup lang="ts">
 import { useConnectionStore } from "@/stores/Connection";
+import { vibrate } from "@tauri-apps/plugin-haptics";
+
 const { $socket, $isWebSocketConnected } = useNuxtApp();
 const connectionStore = useConnectionStore();
 
@@ -43,6 +45,7 @@ function renderComponent(componentData) {
 
 const sendMessage = async () => {
   console.log("Sending message");
+  await vibrate(2);
 
   // Check if the socket is ready before sending the message
   if ($socket.value && $socket.value.readyState === WebSocket.OPEN) {

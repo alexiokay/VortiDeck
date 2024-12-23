@@ -72,21 +72,7 @@ async fn advertise_service(ip: String, port: u16) -> Result<(), zeroconf::error:
     );
 
     // Run the mDNS advertisement in the background
-    tokio::spawn(async move {
-        loop {
-            match event_loop.poll(Duration::from_secs(1)) {
-                Ok(()) => (),
-                Err(err) => {
-                    eprintln!("mDNS poll error: {}", err);
-                    break;
-                }
-            }
-            tokio::task::yield_now().await;  // Yield control to other tasks
-
-            // // Sleep to avoid tight polling loops
-            // sleep(Duration::from_secs(10)).await;
-        }
-    });
+   
 
     Ok(())
 }

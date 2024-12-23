@@ -25,9 +25,46 @@ importers:
       '@tauri-apps/plugin-websocket':
         specifier: ~2
         version: 2.0.0
-      base:
-        specifier: link:layers\base
-        version: link:layers/base
+      nuxt:
+        specifier: ^3.14.1592
+        version: 3.14.1592(@parcel/watcher@2.5.0)(@types/node@22.9.3)(eslint@9.16.0(jiti@2.4.0))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.27.4)(sass@1.81.0)(terser@5.36.0)(typescript@5.7.2)(vite@5.4.11(@types/node@22.9.3)(sass@1.81.0)(terser@5.36.0))
+      vue:
+        specifier: latest
+        version: 3.5.13(typescript@5.7.2)
+      vue-router:
+        specifier: latest
+        version: 4.5.0(vue@3.5.13(typescript@5.7.2))
+    devDependencies:
+      '@iconify-json/fxemoji':
+        specifier: ^1.2.1
+        version: 1.2.1
+      '@iconify-json/icon-park':
+        specifier: ^1.2.2
+        version: 1.2.2
+      '@iconify-json/marketeq':
+        specifier: ^1.2.2
+        version: 1.2.2
+      '@iconify-json/skill-icons':
+        specifier: ^1.2.0
+        version: 1.2.0
+
+  apps/tauri-mobile2:
+    dependencies:
+      '@tauri-apps/api':
+        specifier: ^2.1.1
+        version: 2.1.1
+      '@tauri-apps/cli':
+        specifier: ^2.1.0
+        version: 2.1.0
+      '@tauri-apps/plugin-barcode-scanner':
+        specifier: ~2
+        version: 2.2.0
+      '@tauri-apps/plugin-shell':
+        specifier: ~2
+        version: 2.2.0
+      '@tauri-apps/plugin-websocket':
+        specifier: ~2
+        version: 2.0.0
       nuxt:
         specifier: ^3.14.1592
         version: 3.14.1592(@parcel/watcher@2.5.0)(@types/node@22.9.3)(eslint@9.16.0(jiti@2.4.0))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.27.4)(sass@1.81.0)(terser@5.36.0)(typescript@5.7.2)(vite@5.4.11(@types/node@22.9.3)(sass@1.81.0)(terser@5.36.0))
@@ -202,7 +239,7 @@ importers:
     optionalDependencies:
       '@rollup/rollup-linux-x64-gnu':
         specifier: latest
-        version: 4.29.0
+        version: 4.29.1
     devDependencies:
       '@iconify-json/akar-icons':
         specifier: ^1.2.1
@@ -405,6 +442,9 @@ importers:
 
   layers/mobile:
     dependencies:
+      '@tauri-apps/plugin-haptics':
+        specifier: ^2.2.0
+        version: 2.2.0
       device-detector-js:
         specifier: ^3.0.3
         version: 3.0.3
@@ -1111,6 +1151,9 @@ packages:
   '@iconify-json/fluent@1.2.7':
     resolution: {integrity: sha512-R5Duyek2QCPxHP0NlcgYsaSFe0ftiMiL17fJrCxop0OKgZbUuqpgruGSmnRqljjvsdv3TdR7HV5XobGYejUIBw==}
 
+  '@iconify-json/fxemoji@1.2.1':
+    resolution: {integrity: sha512-qMuMfWzeq9hWejgQFELrsqPKRp9xjG71uqG8ATLce89CuDtfXf1E0XerbEQeMaiOEPv1Gi5nefnpLGaryzGa5w==}
+
   '@iconify-json/gala@1.2.2':
     resolution: {integrity: sha512-AwTyZWuMWANmN/q4zb2gDV9bhxJiP3uNHja9XxIi1TkemX853RmXLF0z25ecWeEBG5e2ZHDYJxUIUP0NxEfT/A==}
 
@@ -1134,6 +1177,9 @@ packages:
 
   '@iconify-json/icon-park-outline@1.2.1':
     resolution: {integrity: sha512-cNvUJL9mk3xOfyffErQuxvyRCWk0hCx1M8AEyGmNXjqIfgPC25OChCstt0KFB3IULS+hw9es+uA7pvVPmQh+AA==}
+
+  '@iconify-json/icon-park@1.2.2':
+    resolution: {integrity: sha512-MdC180Mfz0h9RLTCcT49uKdllynCcG2V0nmggAkTn9pEJig9bOvQzC+05otNSlMjloAPzryj/RCf2P/nHiEeHg==}
 
   '@iconify-json/iconamoon@1.2.1':
     resolution: {integrity: sha512-r9uuB2kfeLpi3T74fMnoQxfmKiALQ7mW0MoktDLBt70XtDmxGptf5boOmVdXgYQorNOVqEbjyvBEJRu+HR+g6w==}
@@ -1197,6 +1243,9 @@ packages:
 
   '@iconify-json/ri@1.2.3':
     resolution: {integrity: sha512-UVKofd5xkSevGd5K01pvO4NWsu+2C9spu+GxnMZUYymUiaWmpCAxtd22MFSpm6MGf0MP4GCwhDCo1Q8L8oZ9wg==}
+
+  '@iconify-json/skill-icons@1.2.0':
+    resolution: {integrity: sha512-5zlPrzF5pelV1wut7C88zmAiYONvGxvFw11dXW1Pr1oIhUOtYhC7x3zkErSTFkyZ3m5fEgcEUrcO1W3UhNJVpw==}
 
   '@iconify-json/solar@1.2.1':
     resolution: {integrity: sha512-LA3WZ7HOi5O/sEc2M+BcQNJYNFDnUKP+ZldmNf8kwndnCuFMo+fukt6tSu4BqYRsRgp/Ku4xnys1JGBDi+QtCQ==}
@@ -1921,8 +1970,8 @@ packages:
     cpu: [x64]
     os: [linux]
 
-  '@rollup/rollup-linux-x64-gnu@4.29.0':
-    resolution: {integrity: sha512-qh0ussrXBwnF4L07M9t1+jpHRhiGSae+wpNQDbmlXHXciT7pqpZ5zpk4dyGZPtDGB2l2clDiufE16BufXPGRWQ==}
+  '@rollup/rollup-linux-x64-gnu@4.29.1':
+    resolution: {integrity: sha512-87xYCwb0cPGZFoGiErT1eDcssByaLX4fc0z2nRM6eMtV9njAfEE6OW3UniAoDhX4Iq5xQVpE6qO9aJbCFumKYQ==}
     cpu: [x64]
     os: [linux]
 
@@ -2080,6 +2129,9 @@ packages:
 
   '@tauri-apps/plugin-barcode-scanner@2.2.0':
     resolution: {integrity: sha512-16AgAjNZGS790KXTW2oq7K0YKUCxLmlDlizN7+pBvIcZzdR3kYzHSST/CYSXkAkYRParyHmE2nMsMvqJFAHKbA==}
+
+  '@tauri-apps/plugin-haptics@2.2.0':
+    resolution: {integrity: sha512-4x/QFowYsyWdZpg/1HRA3eMkX4Rol0su5XBneKeYat6EdXBTnMnuqYBaDKUcpH3vJF6UGWA3AzPeA4a+ewWS8Q==}
 
   '@tauri-apps/plugin-shell@2.2.0':
     resolution: {integrity: sha512-iC3Ic1hLmasoboG7BO+7p+AriSoqAwKrIk+Hpk+S/bjTQdXqbl2GbdclghI4gM32X0bls7xHzIFqhRdrlvJeaA==}
@@ -7992,6 +8044,10 @@ snapshots:
     dependencies:
       '@iconify/types': 2.0.0
 
+  '@iconify-json/fxemoji@1.2.1':
+    dependencies:
+      '@iconify/types': 2.0.0
+
   '@iconify-json/gala@1.2.2':
     dependencies:
       '@iconify/types': 2.0.0
@@ -8021,6 +8077,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/icon-park-outline@1.2.1':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/icon-park@1.2.2':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -8105,6 +8165,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/ri@1.2.3':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/skill-icons@1.2.0':
     dependencies:
       '@iconify/types': 2.0.0
 
@@ -9320,7 +9384,7 @@ snapshots:
   '@rollup/rollup-linux-x64-gnu@4.27.4':
     optional: true
 
-  '@rollup/rollup-linux-x64-gnu@4.29.0':
+  '@rollup/rollup-linux-x64-gnu@4.29.1':
     optional: true
 
   '@rollup/rollup-linux-x64-musl@4.27.4':
@@ -9456,6 +9520,10 @@ snapshots:
       '@tauri-apps/cli-win32-x64-msvc': 2.1.0
 
   '@tauri-apps/plugin-barcode-scanner@2.2.0':
+    dependencies:
+      '@tauri-apps/api': 2.1.1
+
+  '@tauri-apps/plugin-haptics@2.2.0':
     dependencies:
       '@tauri-apps/api': 2.1.1
 

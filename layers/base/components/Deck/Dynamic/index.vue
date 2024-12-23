@@ -1,5 +1,5 @@
 <template lang="pug">
-div(class="w-full h-full grid grid-cols-4 gap-4")
+div(class="w-full max-h-full grid portrait:grid-cols-3 landscape:grid-cols-5 gap-4 px-[3rem] place-items-stretch justify-center	")
     DeckDynamicButton(
     @click="useSendCommand('backspace')"
     v-for="button in buttons"

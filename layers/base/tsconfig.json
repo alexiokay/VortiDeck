@@ -20,7 +20,9 @@
     "../desktop/components/Sidebar.vue",
     "../desktop/components/Sidebar.vue",
     "../mobile/components/Bottom.vue",
-    "../mobile/components/Bottom.vue"
+    "../mobile/components/Bottom.vue",
+    "../mobile/pages/deck.vue",
+    "../mobile/pages/deck.vue"
   ],
   "vueCompilerOptions": {
     "plugins": ["volar-service-pug", "@vue/language-plugin-pug"]

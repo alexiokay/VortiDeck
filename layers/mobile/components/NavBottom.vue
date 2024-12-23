@@ -12,7 +12,7 @@ import PepiconsPencilKeyboard from "~icons/pepicons-pencil/keyboard?width=27px&h
 
 const menu = ref({
   deck: {
-    title: "Deck",
+    title: "Home",
     icon: PepiconsPencilKeyboard,
     to: "/",
     active: true,
@@ -24,9 +24,9 @@ const menu = ref({
     active: true,
   },
   test2: {
-    title: "test2",
+    title: "Deck",
     icon: PepiconsPencilKeyboard,
-    to: "/",
+    to: "/deck",
     active: true,
   },
   test3: {

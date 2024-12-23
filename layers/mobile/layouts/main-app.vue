@@ -1,5 +1,5 @@
 <template lang="pug">
-    div(id="main-app" style="" class="theme-default  h-screen flex flex-row bg-[#eff3f6] justify-center items-start w-full   ")
+    div(id="main-app" style="" class="theme-default  h-screen flex flex-row bg-[#eff3f6] justify-center items-start w-full  overflow-x-hidden  ")
         div#overlay(class="absolute overlaying top-0 left-0 w-full h-screen bg-black opacity-40 z-10 hidden-overlay")
         //- Sidebar(class="" )
         NavBottom(class="fixed bottom-0")
@@ -8,7 +8,7 @@
           //- mt-[9.1dvh]
           //- //min-h-[calc(100dvh-18.2dvh)]
           <slot class="" />
-          <!-- Footer(v-if="route.path!=='/login' && route.path!=='/signup'" class="mt-12") -->
+          <!-- Footer(v-if="route.path!=='/login' && route.path!=='/signup'" class="mt-12") --> 
     div(class="cursor cursor--small")
     
     </template>
@@ -32,7 +32,9 @@ onMounted(() => {});
 </script>
 
 <style lang="sass">
-
+:root
+  touch-action: pan-x pan-y
+  height: 100%
 *
     scroll-snap-type: y mandatory
 

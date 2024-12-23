@@ -4,14 +4,6 @@ export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
   extends: [["../../layers/mobile", { install: true }]],
-  future: {
-    compatibilityVersion: 4,
-  },
-  ssr: false,
-
-  build: {
-    transpile: ["@tauri-apps/api"],
-  },
 
   routeRules: {
     "/": { prerender: true },
@@ -58,16 +50,6 @@ export default defineNuxtConfig({
   //     }
   //   },
   // },
-
-  vite: {
-    clearScreen: false,
-    envPrefix: ["VITE_", "TAURI_"],
-    server: {
-      watch: {
-        usePolling: true,
-      },
-    },
-  },
 
   // !tauri
 

@@ -3,6 +3,7 @@ mod commands;
 
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_haptics::init())
         .plugin(tauri_plugin_barcode_scanner::init())
         .setup(|app| {
             if cfg!(debug_assertions) {

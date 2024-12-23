@@ -20,6 +20,7 @@
   "vueCompilerOptions": {
     "plugins": ["volar-service-pug", "@vue/language-plugin-pug"]
   },
+  "types": ["@tauri-apps/plugin-haptics"],
   "compilerOptions": {
     "esModuleInterop": true
   },

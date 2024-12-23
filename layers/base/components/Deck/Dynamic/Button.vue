@@ -1,14 +1,26 @@
 <template lang="pug">
-div(class="flex flex-col gap-y-2")
-    div( class="border-[1px] rounded-md border-gray-400 aspect-square w-full button ") 
-    p {{ props.label }}
+div(@click="haptics" class="border-[1px] rounded-xl border-[#1a1a1a35]  h-min w-[100%] aspect-square button bg-[#1a1a1af7]  shadow-md p-2")
+  component(:is="icon" class="w-full h-full")
+
 </template>
 
 <script setup lang="ts">
+import {
+  vibrate,
+  impactFeedback,
+  notificationFeedback,
+  selectionFeedback,
+} from "@tauri-apps/plugin-haptics";
+
+const haptics = async () => {
+  await impactFeedback("soft");
+};
+
 const props = defineProps({
   id: Number,
   label: String,
   action: String,
+  icon: Object,
 });
 </script>
 

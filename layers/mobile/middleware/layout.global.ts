@@ -15,6 +15,9 @@ export default defineNuxtRouteMiddleware((to) => {
   } else if (to.path === "/qr") {
     setPageLayout("qr");
     console.log("set layout to qr");
+  } else if (to.path === "/deck") {
+    setPageLayout("deck");
+    console.log("set layout to deck");
   } else {
     setPageLayout("main-app");
     console.log("set layout to main-app");
