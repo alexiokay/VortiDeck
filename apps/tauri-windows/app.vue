@@ -8,6 +8,8 @@
 </template>
 
 <script lang="ts" setup>
+const config = useRuntimeConfig();
+console.log(config.public.test);
 // import { listen } from "@tauri-apps/api/event";
 // import { useMobileStore } from "@/stores/Mobile";
 

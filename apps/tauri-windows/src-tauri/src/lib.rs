@@ -1,5 +1,9 @@
 mod commands;
+
+
 pub mod shared_state;
+pub mod db;
+
 use crate::shared_state::AppState;
 use tauri::{Manager, State, App, AppHandle};
 
@@ -10,18 +14,11 @@ fn test_command() {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  
   tauri::Builder::default()
-      .setup(|app: &mut App| {
-        // Demonstrating how to access and modify state in setup
-        let app_handle = app.handle();
-        let secrets_state: State<AppState> = app.state();
-
-
-
-        Ok(())
-    })
     
-
+    
+    
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }

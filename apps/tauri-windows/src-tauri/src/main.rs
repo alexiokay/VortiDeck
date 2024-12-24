@@ -22,6 +22,7 @@ use std::net::IpAddr;
 use serde::Serialize;
 use platform_info::*;
 use serde_json::json;
+use tauri_plugin_store::StoreExt;
 
 // type PeerState = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 
@@ -51,6 +52,16 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
 
     // let test = Manager::state::<AppState>(app);
     let app_handle = app.handle().clone();
+    let store = app.store("store.json")?;
+    store.set("some-key", json!({ "value": 5 }));
+
+    // Get a value from the store.
+    let value = store.get("some-key").expect("Failed to get value from store");
+    println!("{}", value); // {"value":5}
+
+    // // Remove the store from the resource table
+    // store.close_resource();
+
 
     // test.display_secret();
 
@@ -120,13 +131,15 @@ async fn my_app(app_handle: AppHandle) {
  
 
 }
+mod db;
+use crate::db::initialize_database; // Import your database initialization function
 
 #[tokio::main]
 async fn main() {
    
     let app_state = AppState::default();
     let peer_state = PeerState::default();
-    
+    initialize_database();
 
    
 
@@ -135,7 +148,8 @@ async fn main() {
    
     
     tauri::Builder::default()
-        .setup(setup)
+
+        
         .manage(app_state)
         .manage(peer_state)
         // .manage(state)
@@ -145,7 +159,8 @@ async fn main() {
             commands::discover_websocket::discover_websocket,
             commands::retrieve_peers::retrieve_peers,
         ])
-        
+        .plugin(tauri_plugin_store::Builder::new().build())
+        .setup(setup)
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
 }
@@ -196,6 +211,7 @@ async fn handle_connection(
     let mut device_type = "unknown".to_string();
     let mut device_model = "unknown".to_string();
     let mut provided_secret = None;
+    let mut device_token = None;
 
    
 
@@ -236,15 +252,36 @@ async fn handle_connection(
                 );
                 
                 provided_secret = json["secret"].as_str().map(|s| s.to_string());
+                device_token = json["device_token"].as_str().map(|s| s.to_string()); // Extract token if present
+
             }
         }
     }
 
     // Authenticate client
-    if peer_ip != server_ip.to_string() {
+    // Authenticate client
+    if let Some(token) = device_token {
+        // Check if the device token is valid
+        // if !is_valid_token(&token, app_state).await {
+        //     eprintln!("Authentication failed for client: {}", client_id);
+        //     let _ = write.send(Message::Close(None)).await;
+        //     return;
+        // }
+    } else if peer_ip != server_ip.to_string() {
         match provided_secret {
             Some(secret) if Some(&secret) == app_state.get_secret().as_ref() => {
                 eprintln!("Client authenticated: {}", client_id);
+                // generating persistent token for device
+                //TODO! let new_token = Uuid::new_v4().to_string();
+                // store_device_token(&client_id, &new_token, app_state).await; // Store the new persistent token
+                // Send the persistent token to the client (optional)
+                //TODO! let response = json!({
+                //     "action": "pairing_complete",
+                //     "token": new_token
+                // });
+                //TODO! if write.send(Message::Text(response.to_string())).await.is_err() {
+                //     eprintln!("Failed to send token to client");
+                // }
             }
             _ => {
                 eprintln!("Authentication failed for client: {}", client_id);
@@ -294,21 +331,13 @@ async fn handle_connection(
     if device_type == "mobile" {
         // Clone the app_handle and await the future result
   
+        // let peers = get_serialized_peers_excluding_server(app_handle.clone()).await;
         let peers = get_serialized_peers_excluding_server(app_handle.clone()).await;
 
         // Safely emit the event after obtaining the result
         app_handle.emit("new_mobile_peer_added", peers).unwrap_or_else(|e| {
             eprintln!("Failed to emit new_mobile_peer_added event: {}", e);
         });
-
-        // app_handle.emit(
-        //     "new_mobile_peer_added",
-        //     SerializablePeerInfo {
-        //         client_id: client_id.to_string(),
-        //         device_type: device_type.to_string(),
-        //         device: device_model.to_string(),
-        //     },
-        // ).unwrap_or_else(|e| eprintln!("Failed to emit new_mobile_peer_added event: {}", e));
 
         // Send the message to the mobile client
       
@@ -458,3 +487,15 @@ async fn execute_command(command: &str) {
         }
     }
 }
+
+// // Helper function to verify token
+// async fn is_valid_token(token: &str, app_state: &AppState) -> bool {
+//     // Logic to verify if the token exists and is valid
+//     app_state.verify_device_token(token).await
+// }
+
+// // Helper function to store the device token
+// async fn store_device_token(client_id: &str, token: &str, app_state: &AppState) {
+//     // Logic to store the token in a persistent database
+//     app_state.store_device_token(client_id, token).await
+// }

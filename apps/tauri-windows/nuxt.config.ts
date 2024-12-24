@@ -49,7 +49,6 @@ export default defineNuxtConfig({
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
 
     public: {
-      test: "test",
       cwd: process.cwd(),
       BASE_URL: process.env.BASE_URL,
       API_TOKEN: process.env.API_TOKEN,
@@ -59,6 +58,7 @@ export default defineNuxtConfig({
       gtm_id: process.env.GOOGLE_TAG_MANAGER_ID,
       gtm_enabled: process.env.GOOGLE_TAG_MANAGER_ENABLED,
       gtm_debug: process.env.GOOGLE_TAG_MANAGER_DEBUG,
+      test: process.env.TEST,
     },
   },
 });

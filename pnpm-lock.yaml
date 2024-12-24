@@ -48,37 +48,6 @@ importers:
         specifier: ^1.2.0
         version: 1.2.0
 
-  apps/tauri-mobile2:
-    dependencies:
-      '@tauri-apps/api':
-        specifier: ^2.1.1
-        version: 2.1.1
-      '@tauri-apps/cli':
-        specifier: ^2.1.0
-        version: 2.1.0
-      '@tauri-apps/plugin-barcode-scanner':
-        specifier: ~2
-        version: 2.2.0
-      '@tauri-apps/plugin-shell':
-        specifier: ~2
-        version: 2.2.0
-      '@tauri-apps/plugin-websocket':
-        specifier: ~2
-        version: 2.0.0
-      nuxt:
-        specifier: ^3.14.1592
-        version: 3.14.1592(@parcel/watcher@2.5.0)(@types/node@22.9.3)(eslint@9.16.0(jiti@2.4.0))(ioredis@5.4.1)(magicast@0.3.5)(optionator@0.9.4)(rollup@4.27.4)(sass@1.81.0)(terser@5.36.0)(typescript@5.7.2)(vite@5.4.11(@types/node@22.9.3)(sass@1.81.0)(terser@5.36.0))
-      vue:
-        specifier: latest
-        version: 3.5.13(typescript@5.7.2)
-      vue-router:
-        specifier: latest
-        version: 4.5.0(vue@3.5.13(typescript@5.7.2))
-    devDependencies:
-      '@iconify-json/marketeq':
-        specifier: ^1.2.2
-        version: 1.2.2
-
   apps/tauri-windows:
     dependencies:
       '@tauri-apps/api':
