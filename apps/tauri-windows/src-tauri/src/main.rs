@@ -23,7 +23,13 @@ use serde::Serialize;
 use platform_info::*;
 use serde_json::json;
 use tauri_plugin_store::StoreExt;
+mod db;
 
+use std::env;
+
+
+
+use crate::db::db::*;
 // type PeerState = Arc<TokioMutex<HashMap<String, PeerInfo>>>;
 
 // #[derive(Debug, Clone)]
@@ -42,6 +48,7 @@ struct CommandMessage {
 
 
 
+
 #[derive(Debug, thiserror::Error)]
 enum Error {
     #[error(transparent)]
@@ -49,7 +56,7 @@ enum Error {
 }
 
 fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
-
+std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
     // let test = Manager::state::<AppState>(app);
     let app_handle = app.handle().clone();
     let store = app.store("store.json")?;
@@ -59,26 +66,23 @@ fn setup<'a>(app: &'a mut tauri::App) -> Result<(), Box<dyn std::error::Error>> 
     let value = store.get("some-key").expect("Failed to get value from store");
     println!("{}", value); // {"value":5}
 
-    // // Remove the store from the resource table
-    // store.close_resource();
-
-
-    // test.display_secret();
-
     // Start async tasks
     tauri::async_runtime::spawn(async move {
         my_app(app_handle).await
     });
 
-
     Ok(())
 }
 
 
+// use self::db::schema::peers::dsl::*;
+use crate::db::utils::*;
 
 async fn my_app(app_handle: AppHandle) {
+   
 
-    
+
+
 
     // let state: PeerState = Arc::new(TokioMutex::new(HashMap::new()));
 
@@ -131,27 +135,24 @@ async fn my_app(app_handle: AppHandle) {
  
 
 }
-mod db;
-use crate::db::initialize_database; // Import your database initialization function
+
 
 #[tokio::main]
 async fn main() {
-   
-    let app_state = AppState::default();
-    let peer_state = PeerState::default();
+
+
+    
     initialize_database();
 
-   
-
-
-
+    let app_state = AppState::default();
+    let peer_state = PeerState::default();
+    let db_pool = establish_pool();
    
     
     tauri::Builder::default()
-
-        
         .manage(app_state)
         .manage(peer_state)
+        .manage(db_pool) // Add the pool to the Tauri state
         // .manage(state)
         // .manage(listener.clone())
         .invoke_handler(tauri::generate_handler![
@@ -178,8 +179,6 @@ async fn start_websocket(listener: Arc<TcpListener>, app_handle: AppHandle, ip: 
         match listener.accept().await {
             
             Ok((stream, _)) => {
-            
-              
                 tokio::spawn(handle_connection(stream, app_handle.clone(), ip));
             }
             Err(e) => {
@@ -212,6 +211,14 @@ async fn handle_connection(
     let mut device_model = "unknown".to_string();
     let mut provided_secret = None;
     let mut device_token = None;
+
+    
+    let pool = app_handle.state::<DbPool>();
+    let db = Database::new(&pool);
+
+    let count = db.get_peer_count();
+
+    println!("Total number of peers: {}", count);
 
    
 

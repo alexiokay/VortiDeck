@@ -8,8 +8,19 @@
 </template>
 
 <script lang="ts" setup>
+import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
+
 const config = useRuntimeConfig();
 console.log(config.public.test);
+
+onMounted(() => {
+  setupWindow();
+});
+
+async function setupWindow() {
+  await getCurrentWebviewWindow().show();
+  await getCurrentWebviewWindow().setBackgroundColor("#eff3f6");
+}
 // import { listen } from "@tauri-apps/api/event";
 // import { useMobileStore } from "@/stores/Mobile";
 

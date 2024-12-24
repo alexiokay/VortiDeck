@@ -28,6 +28,9 @@ import BiPhone from "~icons/bi/phone?width=16px&height=16px";
 import Fa6SolidCrown from "~icons/fa6-solid/crown?width=648px&height=576px";
 import { useConnectionStore } from "@/stores/Connection";
 
+const config = useRuntimeConfig();
+console.log(config.public.test);
+
 const connectionStore = useConnectionStore();
 
 const { $socket } = useNuxtApp();
