@@ -9,6 +9,10 @@ use diesel::prelude::*;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dotenvy::dotenv;
 use std::env;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::io::BufReader;
+use std::io::BufRead;
 
 pub type DbPool = Pool<ConnectionManager<SqliteConnection>>;
 
@@ -22,8 +26,67 @@ pub fn get_database_path() -> PathBuf {
     db_path
 }
 
+/// Ensure the DATABASE_URL is written to the `.env` file if not already set
+
+
+fn set_database_url_in_env() {
+    let db_path = get_database_path();
+    let db_url = format!("sqlite://{}", db_path.to_str().expect("Invalid DB Path").replace('\\', "\\\\"));
+
+    // Construct the path to the `.env` file in the project root
+    let env_file_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.env");
+
+    // Read the contents of the `.env` file (or create it if it doesn't exist)
+    let mut lines = Vec::new();
+    if env_file_path.exists() {
+        let env_file = OpenOptions::new()
+            .read(true)
+            .open(&env_file_path)
+            .expect("Failed to open .env file for reading");
+
+        let reader = BufReader::new(env_file);
+        for line in reader.lines() {
+            let line = line.expect("Failed to read line from .env");
+            if line.starts_with("DATABASE_URL=") {
+                lines.push(format!("DATABASE_URL={}", db_url)); // Replace the DATABASE_URL line
+                println!("DATABASE_URL replaced in .env file at {}", env_file_path.display());
+            } else {
+                lines.push(line); // Keep other lines unchanged
+            }
+        }
+    } else {
+        println!(".env file does not exist in project root. Creating a new one...");
+    }
+
+    // If DATABASE_URL was not found, add it
+    if !lines.iter().any(|line| line.starts_with("DATABASE_URL=")) {
+        println!("DATABASE_URL not found in .env file. Adding it...");
+        lines.push(format!("DATABASE_URL={}", db_url));
+    }
+
+    // Write the updated content back to the .env file
+    let mut env_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true) // Overwrite the file content
+        .open(&env_file_path)
+        .expect("Failed to open .env file for writing");
+
+    for line in lines {
+        writeln!(env_file, "{}", line).expect("Failed to write line to .env file");
+    }
+
+    println!(".env file updated successfully at {}", env_file_path.display());
+
+    // Set the DATABASE_URL environment variable
+    std::env::set_var("DATABASE_URL", db_url);
+    println!("DATABASE_URL environment variable set");
+}
+
+
 /// Initialize the database by running pending migrations
 pub fn initialize_database() {
+    set_database_url_in_env();
     let db_path = get_database_path();
     println!("initialising database");
     // Ensure the database directory exists

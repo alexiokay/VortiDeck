@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod create_websocket_mdns;
+
 use create_websocket_mdns::create_websocket_mdns;
 mod commands;
 use tokio::time::{Duration, sleep, timeout};
@@ -24,6 +25,8 @@ use platform_info::*;
 use serde_json::json;
 use tauri_plugin_store::StoreExt;
 mod db;
+use crate::db::models::NewPeer;
+
 
 use std::env;
 
@@ -188,7 +191,9 @@ async fn start_websocket(listener: Arc<TcpListener>, app_handle: AppHandle, ip: 
         }
     }
 }
-
+//? TODO: 1. Reuse Peers from db dont create new every new connection
+//? TODO: 2. Find way to clear DB from PEERS which are not existing anymore, or smth.
+//? TODO: 3. When RE-Paired change existing peer token
 async fn handle_connection(
     stream: TcpStream,
     app_handle: AppHandle,
@@ -212,17 +217,12 @@ async fn handle_connection(
     let mut provided_secret = None;
     let mut device_token = None;
 
-    
     let pool = app_handle.state::<DbPool>();
     let db = Database::new(&pool);
 
     let count = db.get_peer_count();
-
     println!("Total number of peers: {}", count);
 
-   
-
-    //This ensures that if the handshake takes longer than 5 seconds, the server will abort.
     let ws_stream = match timeout(Duration::from_secs(5), accept_async(stream)).await {
         Ok(Ok(ws_stream)) => ws_stream,
         Ok(Err(e)) => {
@@ -235,18 +235,9 @@ async fn handle_connection(
         }
     };
 
-    // // old -> 
-    // let ws_stream = match accept_async(stream).await {
-    //     Ok(ws_stream) => ws_stream,
-    //     Err(e) => {
-    //         eprintln!("WebSocket handshake failed: {}", e);
-    //         return;
-    //     }
-    // };
-
     let (mut write, mut read) = ws_stream.split();
     let (tx, mut rx) = broadcast::channel::<Message>(2000); // Increased buffer size
-   
+
     // Parse initial client message
     if let Some(Ok(msg)) = read.next().await {
         if let Ok(text) = msg.to_text() {
@@ -254,52 +245,77 @@ async fn handle_connection(
                 eprintln!("Received initial message: {}", text);
                 client_id = json["clientId"].as_str().unwrap_or("unknown").to_string();
                 device_type = detect_device_type(json["device"]["device"]["type"].as_str().unwrap_or(""));
-                device_model = format!(
-                    "{}",json["device"]["device"]["model"].as_str().unwrap_or("")
-                );
-                
+                device_model = format!("{}", json["device"]["device"]["model"].as_str().unwrap_or(""));
+
                 provided_secret = json["secret"].as_str().map(|s| s.to_string());
-                device_token = json["device_token"].as_str().map(|s| s.to_string()); // Extract token if present
-
+                device_token = json["token"].as_str().map(|s| s.to_string()); // Extract token if present
             }
         }
     }
 
     // Authenticate client
-    // Authenticate client
-    if let Some(token) = device_token {
-        // Check if the device token is valid
-        // if !is_valid_token(&token, app_state).await {
-        //     eprintln!("Authentication failed for client: {}", client_id);
-        //     let _ = write.send(Message::Close(None)).await;
-        //     return;
-        // }
-    } else if peer_ip != server_ip.to_string() {
-        match provided_secret {
-            Some(secret) if Some(&secret) == app_state.get_secret().as_ref() => {
-                eprintln!("Client authenticated: {}", client_id);
-                // generating persistent token for device
-                //TODO! let new_token = Uuid::new_v4().to_string();
-                // store_device_token(&client_id, &new_token, app_state).await; // Store the new persistent token
-                // Send the persistent token to the client (optional)
-                //TODO! let response = json!({
-                //     "action": "pairing_complete",
-                //     "token": new_token
-                // });
-                //TODO! if write.send(Message::Text(response.to_string())).await.is_err() {
-                //     eprintln!("Failed to send token to client");
-                // }
+    if peer_ip != server_ip.to_string() {
+        if let Some(ref token) = device_token {
+            // Check if the provided device token exists in the database
+            match db.get_peer_by_token(&token) {
+                Some(existing_peer) => {
+                    eprintln!("Using existing device with token: {}", token);
+                    // Here, you can update the peer map or do any other necessary actions with the existing peer
+                    // Add the existing peer to the peer_map
+                }
+                None => {
+                    // If no peer is found, reject the authentication and send a close message
+                    eprintln!("Invalid token for client: {}", client_id);
+                    let _ = write.send(Message::Close(None)).await;
+                    return;
+                }
             }
-            _ => {
-                eprintln!("Authentication failed for client: {}", client_id);
-                let _ = write.send(Message::Close(None)).await;
-                return;
+        } else if let Some(secret) = provided_secret {
+            // Check if the provided secret matches the app's secret
+            match app_state.get_secret() {
+                Some(app_secret) if secret == *app_secret => {
+                    // Secret is valid, generate a new token for the client
+                    let new_token = generate_token(); // Implement this function to create a new token
+                    eprintln!("Client authenticated with secret: {}", client_id);
+
+                    // Store the new token in the database for future validation
+                    let new_peer = NewPeer {
+                        client_id: &client_id,
+                        ip: &peer_ip,
+                        device_type: &device_type,
+                        device: &device_model,
+                        device_token: Some(&new_token),
+                    };
+
+                    // Store the peer and the token in the database
+                    if let Err(e) = db.add_peer(new_peer) {
+                        eprintln!("Error adding peer to database: {}", e);
+                    } else {
+                        eprintln!("New device added to the database with token: {}", client_id);
+                    }
+
+                    // Send the generated token back to the client for future use
+                    let token_message = json!({
+                        "action": "new_token",
+                        "token": new_token,
+                    });
+
+                    if write.send(Message::Text(token_message.to_string())).await.is_err() {
+                        eprintln!("Failed to send token to client");
+                    }
+                }
+                _ => {
+                    eprintln!("Authentication failed for client: {}", client_id);
+                    let _ = write.send(Message::Close(None)).await;
+                    return;
+                }
             }
+        } else {
+            eprintln!("No token or secret provided for client: {}", client_id);
+            let _ = write.send(Message::Close(None)).await;
+            return;
         }
     }
-    
-
-    println!("Client connected: {} ({})", client_id, device_type);
 
     // Add client to peers map
     {
@@ -311,66 +327,35 @@ async fn handle_connection(
                 ip: peer_ip.clone().parse().expect("Invalid IP format"),
                 sender: tx.clone(),
                 device_type: device_type.clone(),
-                device: device_model.clone()
+                device: device_model.clone(),
             },
         );
     }
 
-
+    // Send server info to the client
     let server_info = app_state.get_server_data().unwrap();
-
-
-    // Emit different events based on device type (mobile or desktop)
-   // Construct the client message to send device and server info
     let client_message = json!({
         "action": "server_info",
         "server": {
             "ip": server_info.ip,
             "port": server_info.port,
-            // "status": server_info.status,
             "device_type": server_info.device_type,
             "server_name": server_info.server_name,
         }
     });
 
-    println!("device type: {}", device_type);
-    // Emit event for mobile client
-    if device_type == "mobile" {
-        // Clone the app_handle and await the future result
-  
-        // let peers = get_serialized_peers_excluding_server(app_handle.clone()).await;
-        let peers = get_serialized_peers_excluding_server(app_handle.clone()).await;
-
-        // Safely emit the event after obtaining the result
-        app_handle.emit("new_mobile_peer_added", peers).unwrap_or_else(|e| {
-            eprintln!("Failed to emit new_mobile_peer_added event: {}", e);
-        });
-
-        // Send the message to the mobile client
-      
-        if  write.send(Message::Text(client_message.to_string())).await.is_err() {
-            eprintln!("Failed to send message to mobile client");
-        } else {
-            println!{"message sent to mobile client"}
-        }
-       
+    if write.send(Message::Text(client_message.to_string())).await.is_err() {
+        eprintln!("Failed to send server info to client");
     }
-   
-
 
     // Spawn a task for incoming messages
-    // let state_clone = state.clone();
     let client_id_clone = client_id.clone();
-
     tokio::spawn(async move {
         while let Some(Ok(msg)) = read.next().await {
             if let Ok(text) = msg.to_text() {
                 println!("Received from {}: {}", client_id_clone, text);
                 if let Ok(json) = serde_json::from_str::<Value>(text) {
                     if let Some(action) = json["action"].as_str() {
-                        if action == "component" {
-                            // forward_to_mobile(state_clone.clone(), json.to_string()).await;
-                        }
                         if action == "command" {
                             if let Some(command) = json["command"].as_str() {
                                 execute_command(command).await;
@@ -399,6 +384,12 @@ async fn handle_connection(
         peers.remove(&client_id);
     }
 }
+
+fn generate_token() -> String {
+    // Implement token generation logic (e.g., random string or JWT)
+    uuid::Uuid::new_v4().to_string()
+}
+
 
 // async fn forward_to_mobile(state: PeerState, payload: String) {
 //     let peers = state.lock().await;

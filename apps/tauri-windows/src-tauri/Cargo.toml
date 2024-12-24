@@ -49,6 +49,7 @@ dotenvy = "0.15"
 tauri-plugin-store = "2"
 dirs = "5.0.1"
 
+
 [dependencies.uuid]
 version = "1.11.0"
 features = [

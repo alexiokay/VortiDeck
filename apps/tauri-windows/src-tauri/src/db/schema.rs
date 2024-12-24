@@ -7,5 +7,6 @@ diesel::table! {
         ip -> Text,
         device_type -> Text,
         device -> Text,
+        device_token -> Nullable<Text>,
     }
 }

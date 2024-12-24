@@ -95,13 +95,14 @@ export default defineNuxtPlugin(() => {
 
       const userAgent = navigator.userAgent;
       const device = deviceDetector.parse(userAgent);
-
+      let token = localStorage.getItem("token");
       // Send initial device information
       socket.value?.send(
         JSON.stringify({
           device: device,
           clientId,
-          action: "connect",
+          action: "authenticate",
+          token: token,
         })
       );
 
@@ -120,6 +121,7 @@ export default defineNuxtPlugin(() => {
       console.log("WebSocket connection closed:", event);
       isWebSocketConnected.value = false;
       connectionStore.setStatus("disconnected");
+      // alert("closed");
       if (!event.wasClean) {
         attemptReconnect();
       }

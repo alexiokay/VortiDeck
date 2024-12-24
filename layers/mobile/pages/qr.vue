@@ -83,6 +83,10 @@ const connectToWebsocket = (wsUrl: string, key: string) => {
       // alert(JSON.stringify(message.server));
       connectionStore.setPeers(message.server);
     }
+
+    if (message.action === "new_token") {
+      localStorage.setItem("token", message.token);
+    }
   };
 };
 
